@@ -1,0 +1,16 @@
+{
+  "name": "@mtchship/compass",
+  "version": "1.0.0",
+  "description": "Zero-dependency TypeScript client for MTCHSHIP Edge & local Drydock (127.0.0.1:8443)",
+  "license": "Apache-2.0",
+  "author": "Lovorise Ltd (UK Company No. 15814939)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
