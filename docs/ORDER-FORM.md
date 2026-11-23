@@ -3,7 +3,7 @@
 **Order Form Version:** 1.0.0 · **Provider:** Lovorise Ltd (UK Company No. 15814939)  
 **Registered Office:** 27 Old Gloucester Street, London, WC1N 3AX, United Kingdom · **Contact:** support@mtchship.com
 
-This Order Form is governed by the **MTCHSHIP Master Service Agreement (`MSA-PART-1.md` & `MSA-PART-2.md`)**, **Service Level Agreement (`SLA.md`)**, **Data Processing Agreement (`DPA.md`)**, **Acceptable Use Policy (`AUP.md`)**, and **Privacy Policy (`PRIVACY.md`)** (collectively, the **Agreement**). In the event of conflict, this signed Order Form takes precedence.
+This Order Form is governed by the **MTCHSHIP Master Service Agreement (`MSA.md`)**, **Service Level Agreement (`SLA.md`)**, **Data Processing Agreement (`DPA.md`)**, **Acceptable Use Policy (`AUP.md`)**, and **Privacy Policy (`PRIVACY.md`)** (collectively, the **Agreement**). In the event of conflict, this signed Order Form takes precedence.
 
 Copyright © 2026 Lovorise Ltd. All Rights Reserved.
 
