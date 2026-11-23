@@ -1,0 +1,65 @@
+# Master Service Agreement (MSA): MTCHSHIP Edge
+
+**Version:** 1.0.0 · **Effective Date:** 2026-01-01 · **Entity:** Lovorise Ltd (UK Company No. 15814939)
+
+This Master Service Agreement (**MSA**) governs access to and use of paid **MTCHSHIP Edge** services (**Pro**, **Business**, **Enterprise**, with **Harbor API** included as a built-in feature, plus **Standalone Add-ons**) provided by **Lovorise Ltd** (England & Wales, Company No. **15814939**, **27 Old Gloucester Street, London, WC1N 3AX, United Kingdom**) to the subscribing business entity (**Customer**) strictly on a business-to-business (**B2B**) basis.
+
+Copyright © 2026 Lovorise Ltd. All Rights Reserved.
+
+## 1. Scope of Services & Open-Source Distinction
+
+* **Plug-in Edge (`BYOS`):** Customer retains sole ownership and operational control of its frontend CDNs, cloud servers, databases, and object storage (**BYOS: Bring Your Own Stack & Storage**). MTCHSHIP Edge operates in the background as a non-custodial, diskless docking hub attached via targeted `DNS-Only CNAME` records (no intermediary proxy, plus optional Root Domain `ALIAS`/`ANAME`).
+* **Core Production Subscriptions (`Active-Active Mesh`):** Covers **Pro** (**Data Plane**), **Business** (**Pro + Bulkhead Isolation, Quantum Mesh & Cargo Seal**), and **Enterprise** (**Business + Harbor Defense & Engine Room Compute**). Every Core Plan includes the full **Harbor API** suite (`Match Centre`, `Match Ticker`, `Story & News Feed API`, `Live Support`, `Chat/RTC`, `Forms`, `Edge State API`) as an included feature, with unmetered bandwidth and requests (subject to `AUP.md`) per `SLA.md`.
+* **Standalone Add-ons (Available on Request):** Customer may independently provision **GPU Forge Harbor** (**GPU Plane**: `10 / 20 / 40 Gbps / Custom`), **Stream Harbor** (**Stream Plane**: `10 / 20 / 40 Gbps / Custom`), and **Sealed Hold** (**Reserve Plane: ZK-PoR**: `192 / 384 / 768 GB / Custom` DDR5 RAM) across all six (6) regions (**Europe**, **Middle East**, **APAC**, **North America**, **South America**, **Africa**) with or without a core subscription.
+* **30-Day Early Access Pilot & Design Partner Program:** Initial bare-metal deployments onboarded via our **30-day Early Access Pilot / Design Partner Program**—comprising **48 hours to 14 calendar days** for initial bare-metal **Active-Active Mesh** setup (depending on regional hardware availability and customer specifications) plus **16 days** of live evaluation testing (managed via **support@mtchship.com** while the `mtchship.com` self-service portal is under development)—are governed in full by this `MSA.md` and `SLA.md` upon upfront payment confirmation and activation, unless modified in a signed Order Form. Once the **Active-Active Mesh** is live, subsequent Core Plan customer onboardings complete **within minutes via `DNS-Only CNAME`**, while custom-configured hardware **Standalone Add-ons** provision within **48 hours to 14 calendar days** depending on hardware availability and customer specifications.
+* **Open-Source Software:** **Drydock**, **Compass SDKs**, and **Compass UI** are licensed separately under **Apache License 2.0** (`LICENSE`), provided "as-is" without uptime warranties, and governed solely by `LICENSE` and `SECURITY.md`.
+
+## 2. Customer Responsibilities & Acceptable Use
+
+* **Configuration & Origins:** Customer is solely responsible for maintaining its domain registrars, accurate `DNS-Only CNAME` records (third-party DNS proxying disabled), valid activation keys (`mtch_live_`), Customer-Managed Public Keys (where **Sealed Hold** is used), and **Primary and Backup endpoints** (origin and **Object Storage**).
+* **Acceptable Use:** Customer shall comply with `AUP.md`. Lovorise may immediately suspend or throttle traffic that threatens network stability, violates `AUP.md`, or exceeds subscribed Dedicated Harbor bandwidth tiers (`10 / 20 / 40 Gbps / Custom`) or allocated **Sealed Hold** DDR5 RAM limits.
+
+## 3. Fees, Billing & Cancellation
+
+* **Subscription, Bare-Metal Setup & Add-on Fees (B2B, 1:1 Currency Parity):** Core plans (**Pro** at `250/mo`, **Business** at `1,000/mo`, **Enterprise** at `5,000/mo`, or discounted annual equivalents at `2,400/yr`, `9,600/yr`, `48,000/yr` saving 20%, billed at **1:1 numerical parity** in **GBP (`£`)** for UK customers or **USD (`$`)** for non-UK customers) and **Standalone Add-ons** are billed B2B in advance **monthly** or **annually** via bank transfer/invoice or corporate card. Because MTCHSHIP Edge provisions dedicated physical bare-metal and SmartNIC infrastructure without cloud virtualization, a **one-time initial bare-metal setup fee** (specified in the Order Form or onboarding quote) applies upfront alongside the initial subscription or add-on payment. Subsequent configuration changes and prorated tier upgrades provision within **up to 24 hours** with no additional setup fee. Paid fees are non-refundable except as required by mandatory law.
+* **Billing Currency & B2B VAT Rules:**
+  * **United Kingdom (UK):** Billed strictly in **GBP (`£`)** at 1:1 numerical parity (`£250/mo`, `£1,000/mo`, `£5,000/mo` or `£2,400/yr`, `£9,600/yr`, `£48,000/yr`) plus **20% UK VAT**.
+  * **Rest of the World (Non-UK B2B):** Billed strictly in **USD (`$`)** at 1:1 numerical parity (`$250/mo`, `$1,000/mo`, `$5,000/mo` or `$2,400/yr`, `$9,600/yr`, `$48,000/yr`) **with no UK VAT charged** (B2B cross-border supply of services, outside the scope of UK VAT). Business Customers outside the UK are responsible for any local reverse-charge VAT/GST or withholding taxes in their jurisdiction.
+* **Initial Hardware Setup, 30-Day Pilot & Rapid Mesh Onboarding:** Initial bare-metal deployment for the **Active-Active Mesh** (during the **30-day Early Access Pilot / Design Partner Program**, followed by **16 days** of live evaluation testing) and new custom-configured hardware **Standalone Add-ons** (**GPU Forge Harbor**, **Stream Harbor**, **Sealed Hold**) require upfront payment confirmation and provision within **48 hours to 14 calendar days** depending on regional hardware availability and customer specifications. Once the **Active-Active Mesh** is live, new Core Plan customer onboardings and domain attachments complete **within minutes via `DNS-Only CNAME`**, while subsequent configuration changes, bandwidth/DDR5 RAM expansions, and prorated tier upgrades provision within **up to 24 hours**.
+* **Cancellation Policy (Cancel Anytime, Zero Lock-In):** Cancel anytime via **support@mtchship.com** or revert `DNS-Only CNAME` records. Cancellation takes effect at the end of the current paid billing period, with zero automatic renewal and deterministic `0x00` RAM zeroing upon expiration.
+
+## 4. Diskless Zero-Retention, Stream Harbor, Sealed Hold (`ZK-PoR`) & Data Protection
+
+* **Standard Diskless Data Plane & GPU MediaCargo:** Nodes boot from a PXE-loaded read-only RAM OS image (`persistent_disk_bytes: 0`, Linux swap disabled, `mlockall`-pinned off-heap buffers) across isolated execution planes. Continuous transfers and **MediaCargo** payloads zero (`0x00`) each chunk immediately post-flush upon delivery to Customer's **Primary or Backup endpoint** (origin or **Object Storage**). If **both Primary and Backup endpoints** (origin or **Object Storage**) are unresponsive, offline, or overloaded, a **5-second countdown** initiates immediate `0x00` RAM zeroing unless routed into **Sealed Hold**.
+* **Dedicated Stream Harbor (`Stream Plane`):** Dedicated nodes remain completely diskless (`persistent_disk_bytes: 0`) and scrub each delivered stream chunk (`0x00`) immediately post-flush without interrupting persistent live broadcast sessions.
+* **Sealed Hold (`Reserve Plane: ZK-PoR`):** Operates strictly diskless (`persistent_disk_bytes: 0`) inside hardware-encrypted DDR5 RAM enclaves (**AMD SEV-SNP** / **Intel TDX**) with SmartNIC IOMMU DMA protection, Customer-Key (BYOK) E2E encryption, and **Ballast Proof (`ZK-PoR`)** remote attestation across: (i) **Outage Vault** (buffering after the **5-second countdown** when **both Primary and Backup endpoints** (origin or **Object Storage**) fail and replaying via **autonomous synchronization** upon recovery), (ii) **Transit Receipt** (cryptographic proofs for API deliveries, encrypted emails, and **eSign workflows** without retaining documents or logs), (iii) **Phantom Cache** (TTL-bound ephemeral RAM caching), (iv) **Clean-Room Dock** (zero-knowledge two-party RAM matching), and (v) **Ephemeral Dead-Drop** (one-time burn-after-read handover for secrets, **NDAs, contracts, and encrypted email payloads**). Every RAM sector is zeroed (`0x00`) immediately upon arrival, retrieval, or TTL expiration.
+* **Global Data Protection Compliance:** Both parties shall comply with applicable data protection and residency laws across all six (6) regions (**Europe**, **Middle East**, **APAC**, **North America**, **South America**, **Africa**), including **UK GDPR**, **Data Protection Act 2018**, and **EU GDPR** (`DPA.md`).
+
+## 5. Intellectual Property & Feedback
+
+* **Lovorise IP:** Lovorise retains all rights to **MTCHSHIP Edge**, **Harbor API**, **VoidChassis**, **Harbour Wall**, **BlackHole Engine**, **Traffic Pilot**, **Cargo Seal**, **Harbor Defense**, **Engine Room**, **GPU Forge Harbor**, **Stream Harbor**, **Sealed Hold**, **Ballast Proof**, and all underlying architectures.
+* **Clean-Room, Royalty-Free & Bare-Metal Media Architecture:** **GPU MediaCargo Processor** and **Stream Harbor** run directly on bare-metal hardware without cloud virtualization using Lovorise's clean-room implementations and **royalty-free open standards** across documents, images, full-resolution audio/video, 3D spatial audio, real-time AR overlays, interactive 2D/3D avatars, and 3D/VFX rendering, free from third-party copyrighted media software or pass-through patent-pool fees.
+* **Customer IP:** Customer retains all rights to its domains, frontend CDNs, BYOS origins, Object Storage, cryptographic keys, applications, and transmitted content.
+
+## 6. Warranties & Disclaimers
+
+* **Service Commitment:** Paid Services perform materially in accordance with `SLA.md`. Customer's sole remedy for availability shortfalls is the **Service Credit** mechanism in `SLA.md`.
+* **Disclaimer:** EXCEPT AS EXPRESSLY STATED IN THIS MSA AND `SLA.md`, SERVICES AND OPEN-SOURCE TOOLS ARE PROVIDED "AS-IS" AND "AS-AVAILABLE", DISCLAIMING ALL IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+## 7. Limitation of Liability
+
+* **Exclusion of Indirect Damages:** TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, NEITHER PARTY SHALL BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUE, DATA, OR BUSINESS OPPORTUNITY ARISING OUT OF OR RELATED TO THIS MSA.
+* **Liability Cap:** TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, LOVORISE'S TOTAL AGGREGATE LIABILITY ARISING OUT OF OR RELATED TO THIS MSA SHALL NOT EXCEED THE TOTAL FEES PAID BY CUSTOMER TO LOVORISE UNDER THIS MSA DURING THE **TWELVE (12) MONTHS** IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO LIABILITY. NOTHING IN THIS MSA EXCLUDES OR LIMITS LIABILITY FOR DEATH OR PERSONAL INJURY CAUSED BY NEGLIGENCE, FRAUD, OR ANY OTHER LIABILITY THAT CANNOT BE EXCLUDED UNDER THE LAWS OF ENGLAND AND WALES.
+
+## 8. Indemnification & Suspension
+
+* **Customer Indemnification:** Customer shall defend, indemnify, and hold harmless Lovorise from and against any third-party claims, damages, fines, and reasonable legal costs arising from Customer's content, BYOS origins, **Object Storage**, end-user applications, or breach of `AUP.md` or applicable law.
+* **Termination for Breach:** Either party may terminate this MSA upon written notice if the other party commits a material breach that remains uncured for **fourteen (14) days** (or immediately by Lovorise in the event of severe `AUP.md` violations or non-payment). Upon termination, volatile memory undergoes immediate `0x00` zeroing.
+
+## 9. Governing Law & General Provisions
+
+* **Governing Law & Jurisdiction:** This MSA and any dispute or claim arising out of it shall be governed by and construed in accordance with the laws of **England and Wales**, and the courts of **London, United Kingdom** shall have exclusive jurisdiction.
+* **Order of Precedence & Entire Agreement:** This MSA, together with `SLA.md`, `DPA.md`, `AUP.md`, and `PRIVACY.md`, constitutes the entire agreement between the parties regarding the paid Services. In the event of conflict, the order of precedence is: (1) signed Order Form, (2) `DPA.md` (solely for data protection matters), (3) this `MSA.md`, (4) `SLA.md`, and (5) `AUP.md`.
+* **Severability & Assignment:** If any provision is held invalid, the remaining provisions remain in full force. Neither party may assign this MSA without prior written consent, except to an affiliate or successor in connection with a merger or asset sale.
+
+**Provider:** Lovorise Ltd (UK Companies House No. **15814939**), **27 Old Gloucester Street, London, WC1N 3AX, United Kingdom** · **support@mtchship.com**
