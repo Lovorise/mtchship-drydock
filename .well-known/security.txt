@@ -1,0 +1,6 @@
+Contact: mailto:security@mtchship.com
+Expires: 2027-11-23T23:59:59.000Z
+Preferred-Languages: en, de, fr, es, pt, ar, zh, ja, ko, hi
+Canonical: https://raw.githubusercontent.com/lovorise/mtchship/main/.well-known/security.txt
+Policy: https://github.com/lovorise/mtchship/blob/main/SECURITY.md
+Hiring: mailto:support@mtchship.com
