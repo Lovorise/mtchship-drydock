@@ -96,9 +96,9 @@ See **[docs/PLATFORM.md](./docs/PLATFORM.md)** for plans, capacities, 30-day Ear
 ├── go.mod                     # Go module definition
 ├── LICENSE                    # Apache License 2.0 (Drydock & Compass)
 ├── NOTICE                     # Legal entity & IP attribution notice
-└── MSA-PART-1.md | MSA-PART-2.md | SLA.md | DPA.md | PRIVACY.md | AUP.md | SECURITY.md
+└── MSA.md | SLA.md | DPA.md | PRIVACY.md | AUP.md | SECURITY.md
 ```
 
 * **License & Docs:** **Drydock** and **Compass** are licensed under [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE), [docs/PLATFORM.md](./docs/PLATFORM.md), [docs/WHITEPAPER.md](./docs/WHITEPAPER.md), [docs/ONBOARDING.md](./docs/ONBOARDING.md), and [docs/ORDER-FORM.md](./docs/ORDER-FORM.md).
-* **Commercial Services:** Provided by **Lovorise Ltd** (England & Wales, Company No. **15814939**, **27 Old Gloucester Street, London, WC1N 3AX, United Kingdom**) under [MSA-PART-1.md](./MSA-PART-1.md), [MSA-PART-2.md](./MSA-PART-2.md), [SLA.md](./SLA.md), [DPA.md](./DPA.md), [AUP.md](./AUP.md), and [PRIVACY.md](./PRIVACY.md).
+* **Commercial Services:** Provided by **Lovorise Ltd** (England & Wales, Company No. **15814939**, **27 Old Gloucester Street, London, WC1N 3AX, United Kingdom**) under [MSA.md](./MSA.md), [SLA.md](./SLA.md), [DPA.md](./DPA.md), [AUP.md](./AUP.md), and [PRIVACY.md](./PRIVACY.md).
 * **Early Access & Security:** Onboarding via **support@mtchship.com** · Private vulnerability reports via **security@mtchship.com** ([SECURITY.md](./SECURITY.md)).
