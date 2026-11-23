@@ -1,0 +1,25 @@
+MTCHSHIP Edge (Drydock & Compass)
+Copyright (c) 2026 Lovorise Ltd. All Rights Reserved.
+
+Provider & Legal Entity:
+Lovorise Ltd (Registered in England & Wales, UK Companies House No. 15814939)
+Registered Office: 27 Old Gloucester Street, London, WC1N 3AX, United Kingdom
+Contact: support@mtchship.com | Security: security@mtchship.com
+
+1. Open-Source Software Attribution (Apache License 2.0)
+This repository contains the open-source local runtime "MTCHSHIP Drydock" and
+the cross-platform "Compass" SDK and UI primitives (TypeScript, Swift, Kotlin),
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+2. Commercial Architecture & Trademark Notice
+"MTCHSHIP", "MTCHSHIP Edge", "Harbor API", "VoidChassis", "Harbour Wall",
+"BlackHole Engine", "Traffic Pilot", "Cargo Seal", "Harbor Defense",
+"Engine Room", "GPU Forge Harbor", "Stream Harbor", "Sealed Hold", and
+"Ballast Proof" are proprietary architectures and trademarks of Lovorise Ltd.
+Commercial production services are governed by MSA.md, SLA.md, DPA.md, AUP.md,
+and PRIVACY.md.
+
+3. Clean-Room & Royalty-Free Standards
+MTCHSHIP Edge media and streaming pipelines execute on clean-room
+implementations and royalty-free open standards without third-party
+copyrighted media software or pass-through patent-pool dependencies.
