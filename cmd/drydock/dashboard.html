@@ -3,157 +3,142 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MTCHSHIP / Overview — Local Drydock Control Plane (127.0.0.1)</title>
+  <title>MTCHSHIP / Local Control Plane (127.0.0.1)</title>
   <style>
-    :root {
-      --bg: #f8f9fa;
-      --surface: #ffffff;
-      --border: #e5e7eb;
-      --text: #111827;
-      --muted: #6b7280;
-      --black: #111111;
-      --pill-bg: #f3f4f6;
-      --ok-bg: #ecfdf5;
-      --ok-text: #065f46;
-      --ok-border: #a7f3d0;
-    }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+    body { margin: 0; background: #f8f9fa; color: #111827; display: flex; min-height: 100vh; }
 
-    /* Left Sidebar (matching screenshot layout) */
-    .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 14px; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
-    .brand { font-weight: 800; letter-spacing: 0.08em; font-size: 0.95rem; padding: 0 8px 14px; }
-    .workspace-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; }
-    .workspace-box .title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
-    .workspace-box .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-    .nav-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); padding: 0 8px 8px; text-transform: uppercase; }
-    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 0.82rem; color: #374151; cursor: pointer; margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; }
-    .nav-item:hover { background: var(--pill-bg); }
-    .nav-item.active { background: var(--pill-bg); font-weight: 600; color: var(--text); }
-    .nav-num { font-size: 0.7rem; color: var(--muted); width: 16px; }
-    .sidebar-footer { border-top: 1px solid var(--border); padding-top: 12px; }
+    /* Sidebar */
+    .sidebar { width: 252px; background: #ffffff; border-right: 1px solid #e5e7eb; padding: 18px 14px; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
+    .brand { font-weight: 800; letter-spacing: 0.12em; font-size: 0.96rem; padding: 4px 8px 14px; }
+    .ws-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+    .ws-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; }
+    .ws-sub { font-size: 0.71rem; color: #6b7280; margin-top: 2px; }
+    .nav-section { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; color: #9ca3af; padding: 8px 10px 4px; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 2px; border: none; border-radius: 6px; background: transparent; color: #374151; font-size: 0.81rem; cursor: pointer; }
+    .nav-item:hover { background: #f3f4f6; }
+    .nav-item.active { background: #111111; color: #ffffff; font-weight: 600; }
+    .nav-num { font-size: 0.68rem; opacity: 0.75; width: 16px; font-family: monospace; }
+    .upgrade-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; font-size: 0.74rem; margin-top: 12px; }
 
     /* Main Content */
     .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); height: 52px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; }
-    .topbar-left { display: flex; align-items: center; gap: 12px; }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .chip { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 0.76rem; font-weight: 500; }
-    .chip.ok { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-text); font-weight: 600; }
+    .topbar { background: #ffffff; border-bottom: 1px solid #e5e7eb; height: 52px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; font-size: 0.81rem; gap: 12px; }
+    .chip-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; }
 
-    .content { padding: 28px; max-width: 1200px; width: 100%; margin: 0 auto; }
-    .breadcrumb { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin: 6px 0 22px; flex-wrap: wrap; gap: 12px; }
-    .page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
-    .page-header p { margin: 4px 0 0; font-size: 0.85rem; color: var(--muted); }
-    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .container { padding: 26px 30px; max-width: 1220px; width: 100%; margin: 0 auto; }
+    .eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; color: #6b7280; text-transform: uppercase; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin: 6px 0 20px; flex-wrap: wrap; gap: 12px; }
+    .header-row h1 { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header-row p { margin: 4px 0 0; font-size: 0.84rem; color: #6b7280; }
 
-    .btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 13px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
-    .btn:hover { border-color: #9ca3af; }
-    .btn-primary { background: var(--black); color: #ffffff; border-color: var(--black); }
-    .btn-primary:hover { background: #262626; }
+    .btn { background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 7px 13px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #f9fafb; }
+    .btn-black { background: #111111; color: #ffffff; border-color: #111111; }
+    .btn-black:hover { background: #262626; }
+    .btn-danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 
-    /* KPI Strip (5 cards matching screenshot) */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
-    .kpi-card .label { font-size: 0.75rem; color: var(--muted); }
-    .kpi-card .value { font-size: 1.65rem; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.02em; }
-    .kpi-card .sub { font-size: 0.72rem; color: var(--muted); }
+    /* Tier Switcher */
+    .tier-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .tier-btn { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; text-align: left; cursor: pointer; }
+    .tier-btn.selected { border: 2px solid #111111; }
 
-    /* Sections & Cards */
-    .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; margin-bottom: 18px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .card-title { font-size: 0.92rem; font-weight: 700; margin: 0; }
-    .card-sub { font-size: 0.76rem; color: var(--muted); margin: 2px 0 0; }
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .kpi-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 18px; }
+    .kpi-card .k-lbl { font-size: 0.74rem; color: #6b7280; }
+    .kpi-card .k-val { font-size: 1.5rem; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.02em; }
+    .kpi-card .k-sub { font-size: 0.72rem; color: #6b7280; }
 
-    .row-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
-    .row-item:last-child { border-bottom: none; }
-    .status-badge { background: var(--pill-bg); border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px; font-size: 0.72rem; font-weight: 600; color: #374151; }
-    .status-badge.active { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-text); }
+    /* Cards & Grids */
+    .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 18px; }
+    .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+    .card h2 { margin: 0 0 4px; font-size: 0.94rem; font-weight: 700; }
+    .card .c-sub { font-size: 0.76rem; color: #6b7280; margin-bottom: 12px; }
 
-    /* Tier Switcher Bar */
-    .tier-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-    .tier-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
-    .tier-pill.selected { background: var(--black); color: #fff; border-color: var(--black); }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.82rem; gap: 12px; }
+    .row:last-child { border-bottom: none; }
+    .pill { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 5px; padding: 2px 8px; font-size: 0.71rem; font-weight: 600; color: #374151; white-space: nowrap; }
+    .pill.active { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
 
-    /* Black Fixed-Rate Billing Banner (corrected from "Billed by usage") */
-    .billing-banner { background: #111111; color: #ffffff; border-radius: 10px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
-    .billing-banner .eyebrow { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; font-weight: 700; }
-    .billing-banner h3 { margin: 4px 0; font-size: 1.05rem; }
-    .billing-banner .note { font-size: 0.75rem; color: #9ca3af; }
-    .billing-price { font-size: 1.75rem; font-weight: 700; }
+    .bar-track { height: 12px; background: #f3f4f6; border-radius: 6px; overflow: hidden; margin: 6px 0 12px; }
+    .bar-cloud { height: 100%; background: #111827; opacity: 0.35; }
+    .bar-mtch { height: 100%; background: #059669; }
+
+    /* RAM Cells */
+    .ram-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; margin: 10px 0; }
+    .ram-cell { height: 22px; border-radius: 4px; font-size: 0.62rem; display: flex; align-items: center; justify-content: center; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-family: monospace; }
+    .ram-cell.busy { background: #111111; color: #ffffff; border-color: #111111; }
+
+    .console { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 0.76rem; margin-top: 10px; white-space: pre-wrap; }
+
+    /* Black Banner */
+    .black-banner { background: #111111; color: #ffffff; border-radius: 10px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
+    .black-banner .b-eyebrow { font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; font-weight: 700; }
+    .black-banner h3 { margin: 4px 0; font-size: 1.05rem; }
+    .black-banner .b-sub { font-size: 0.75rem; color: #9ca3af; }
     .btn-white { background: #ffffff; color: #111111; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
 
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .log-output { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 0.76rem; color: #1f2937; margin-top: 10px; white-space: pre-wrap; }
-    select { border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 0.78rem; background: var(--surface); }
-    .tab-section { display: none; }
-    .tab-section.visible { display: block; }
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+    input[type="range"] { width: 100%; margin: 6px 0 12px; cursor: pointer; }
+    select, input[type="text"], input[type="number"] { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.79rem; background: #ffffff; }
   </style>
 </head>
 <body>
-  <!-- Left Navigation Sidebar -->
   <aside class="sidebar">
     <div>
       <div class="brand">MTCHSHIP</div>
-      <div class="workspace-box">
-        <div class="title">LOCAL DRYDOCK</div>
-        <div class="sub">127.0.0.1 Air-Gapped Sandbox</div>
+      <div class="ws-card">
+        <div class="ws-title">LOCAL DRYDOCK</div>
+        <div class="ws-sub">127.0.0.1 Control Plane</div>
       </div>
 
-      <div class="nav-label">Workspace</div>
-      <button class="nav-item active" onclick="switchTab('overview', this)">Overview</button>
-      <button class="nav-item" onclick="switchTab('domains', this)">DNS-Only Domains</button>
-      <button class="nav-item" onclick="switchTab('products', this)">Planes &amp; Add-ons</button>
-      <button class="nav-item" onclick="switchTab('security', this)"><span class="nav-num">01</span> Zero-Retention &amp; Failover</button>
-      <button class="nav-item" onclick="switchTab('billing', this)"><span class="nav-num">02</span> Fixed-Rate Billing</button>
+      <div class="nav-section">Workspace</div>
+      <button type="button" class="nav-item active" data-page="overview">Overview</button>
+      <button type="button" class="nav-item" data-page="domains">Domains</button>
+      <button type="button" class="nav-item" data-page="products">Products &amp; Services</button>
+
+      <div class="nav-section">Execution Planes</div>
+      <button type="button" class="nav-item" data-page="network"><span class="nav-num">01</span> Network &amp; Data Plane</button>
+      <button type="button" class="nav-item" data-page="compute"><span class="nav-num">02</span> Compute (Engine Room)</button>
+      <button type="button" class="nav-item" data-page="security"><span class="nav-num">03</span> Security &amp; Zero-Retention</button>
+      <button type="button" class="nav-item" data-page="harbors"><span class="nav-num">04</span> GPU &amp; Stream Harbors</button>
+      <button type="button" class="nav-item" data-page="sealed"><span class="nav-num">05</span> Sealed Hold (ZK-PoR)</button>
+      <button type="button" class="nav-item" data-page="apis"><span class="nav-num">06</span> Built-in Harbor APIs</button>
+      <button type="button" class="nav-item" data-page="analytics"><span class="nav-num">07</span> TCO &amp; Savings Matrix</button>
+      <button type="button" class="nav-item" data-page="billing"><span class="nav-num">09</span> Billing &amp; Fixed Plans</button>
     </div>
 
-    <div class="sidebar-footer">
-      <div style="font-size: 0.72rem; color: var(--muted); padding: 0 8px;">
-        Lovorise Ltd · UK No. 15814939<br/>
-        Apache-2.0 Local Runtime
-      </div>
+    <div class="upgrade-box">
+      <strong>30-Day Early Access</strong><br/>
+      <span style="color:#6b7280;">support@mtchship.com</span>
     </div>
   </aside>
 
-  <!-- Main Workspace Area -->
   <div class="main">
     <header class="topbar">
-      <div class="topbar-left">
-        <strong>Drydock Local Runtime</strong>
-        <span style="color: var(--muted);">Console / 127.0.0.1</span>
-      </div>
-      <div class="topbar-right">
-        <span class="chip ok">AIR-GAPPED · persistent_disk_bytes: 0</span>
-        <span class="chip mono" id="topZoneChip">Europe · London</span>
+      <div><strong>Local Drydock</strong> <span style="color:#9ca3af;">/</span> <span id="topBreadcrumb" style="color:#6b7280;">Overview</span></div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <span class="chip-ok">AIR-GAPPED · persistent_disk_bytes: 0</span>
+        <select id="regionSel">
+          <option value="Europe · London">Europe · London</option>
+          <option value="Middle East · Dubai">Middle East · Dubai</option>
+          <option value="APAC · Singapore">APAC · Singapore</option>
+          <option value="North America · New York">North America · New York</option>
+          <option value="South America · São Paulo">South America · São Paulo</option>
+          <option value="Africa · Johannesburg">Africa · Johannesburg</option>
+        </select>
       </div>
     </header>
 
-    <div class="content">
-      <!-- OVERVIEW TAB -->
-      <div id="tab-overview" class="tab-section visible">
-        <div class="breadcrumb">Workspace / Overview</div>
-        <div class="page-header">
+    <div class="container">
+      <!-- PAGE 1: OVERVIEW -->
+      <section id="page-overview" class="page-view active">
+        <div class="eyebrow">Workspace / Overview</div>
+        <div class="header-row">
           <div>
             <h1>Infrastructure at a Glance.</h1>
-            <p>Non-custodial bare-metal docking hub · Unmetered flat-rate · Deterministic 0x00 DDR5 RAM scrubbing.</p>
+            <p>One place for your domains, bare-metal execution planes, and TCO savings matrix.</p>
           </div>
-          <div class="header-actions">
-            <button class="btn" onclick="simulatePrimaryFailover()">Test &lt;50ms Failover</button>
-            <button class="btn" onclick="simulateDualOutage()">Test 5s Dual-Outage &rarr; 0x00</button>
-            <button class="btn btn-primary" onclick="downloadManifest()">Export /api/v1/promote</button>
-          </div>
-        </div>
-
-        <!-- Tier Switcher -->
-        <div class="tier-bar" id="tierBar">
-          <button class="tier-pill" onclick="setTier('free')">Free / OSS (£/$0)</button>
-          <button class="tier-pill" onclick="setTier('pro')">Pro (£/$250/mo)</button>
-          <button class="tier-pill" onclick="setTier('business')">Business (£/$1,000/mo)</button>
-          <button class="tier-pill" onclick="setTier('enterprise')">Enterprise (£/$5,000/mo)</button>
-        </div>
-
-        <!-- 5 KPI Cards (matching screenshot structure) -->
-        <div class="kpi-grid">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
