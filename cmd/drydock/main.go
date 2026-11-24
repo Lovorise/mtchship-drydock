@@ -114,15 +114,17 @@ func main() {
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Health & Harbor API status
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	// Root & Health status (checked by CI smoke test)
+	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"status":                "ok",
 			"air_gapped":            true,
 			"persistent_disk_bytes": 0,
 			"harbor_api_included":   rs.cfg.HarborAPI.Enabled,
 		})
-	})
+	}
+	mux.HandleFunc("/", healthHandler)
+	mux.HandleFunc("/healthz", healthHandler)
 
 	// Built-in Harbor API: Edge State API (volatile DDR5 RAM state with 0x00 scrubbing)
 	mux.HandleFunc("/api/v1/state/", func(w http.ResponseWriter, r *http.Request) {
@@ -226,13 +228,17 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 			rs.mu.Lock()
 			rs.activeTier = req.Tier
 			rs.mu.Unlock()
-			writeJSON(w, http.StatusOK, map[string]any{"active_tier": req.Tier, "harbor_api_included": req.Tier != "free"})
+			writeJSON(w, http.StatusOK, map[string]any{
+				"active_tier": req.Tier,
+				"region":      rs.cfg.Simulation.Region,
+				"city":        rs.cfg.Simulation.City,
+			})
 		default:
-			http.Error(w, "invalid tier (expected: free, pro, business, enterprise)", http.StatusBadRequest)
+			http.Error(w, "invalid tier", http.StatusBadRequest)
 		}
 	})
 
-	// POST /api/v1/scrub (Trigger deterministic 0x00 RAM scrubbing from UI)
+	// POST /api/v1/scrub (Execute deterministic 0x00 RAM scrub)
 	mux.HandleFunc("/api/v1/scrub", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -240,67 +246,36 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		}
 		rs.scrubAll()
 		writeJSON(w, http.StatusOK, map[string]any{
-			"scrubbed":     "0x00",
-			"scrub_passes": rs.zeroScrubPasses.Load(),
-			"bytes_zeroed": rs.zeroedBytesTotal.Load(),
+			"scrubbed":          "0x00",
+			"zero_scrub_passes": rs.zeroScrubPasses.Load(),
+			"bytes_zeroed":      rs.zeroedBytesTotal.Load(),
 		})
 	})
 
-	// GET /api/v1/metrics (Latency quantiles, 0x00 zeroing counters & TCO benchmark)
+	// GET /api/v1/metrics (Audit counters & air-gapped invariants)
 	mux.HandleFunc("/api/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
 		rs.mu.RLock()
 		tier := rs.activeTier
 		rs.mu.RUnlock()
 
 		writeJSON(w, http.StatusOK, map[string]any{
-			"entity":                "Lovorise Ltd (UK Company No. 15814939)",
-			"air_gapped":            true,
-			"persistent_disk_bytes": 0,
+			"air_gapped":            rs.cfg.Runtime.AirGapped,
+			"persistent_disk_bytes": rs.cfg.Runtime.PersistentDiskBytes,
 			"active_tier":           tier,
-			"failover_target_ms":    rs.cfg.Network.FailoverTargetMs,
-			"latency_quantiles_ms": map[string]float64{
-				"p50": 0.42,
-				"p95": 1.18,
-				"p99": 2.65,
-			},
-			"ram_zeroing": map[string]any{
-				"pattern":          "0x00",
-				"scrub_passes":     rs.zeroScrubPasses.Load(),
-				"bytes_zeroed":     rs.zeroedBytesTotal.Load(),
-				"swap_disabled":    rs.cfg.Runtime.DisableSwap,
-				"mlockall_enabled": rs.cfg.Runtime.Mlockall,
-			},
-			"standalone_addons": rs.cfg.StandaloneAddons,
+			"zero_scrub_passes":     rs.zeroScrubPasses.Load(),
+			"bytes_zeroed":          rs.zeroedBytesTotal.Load(),
 		})
 	})
 
-	// GET /api/v1/promote (Export pre-filled DNS-Only CNAME, endpoints & SDK cutover manifest)
+	// GET /api/v1/promote (Export DNS-Only CNAME & BYOS/BYOD cutover manifest)
 	mux.HandleFunc("/api/v1/promote", func(w http.ResponseWriter, r *http.Request) {
-		rs.mu.RLock()
-		tier := rs.activeTier
-		rs.mu.RUnlock()
-
 		writeJSON(w, http.StatusOK, map[string]any{
-			"manifest_version": "1.0.0",
-			"provider":         "Lovorise Ltd",
-			"onboarding_email": "support@mtchship.com",
-			"selected_tier":    tier,
-			"destination": map[string]string{
-				"region": rs.cfg.Simulation.Region,
-				"city":   rs.cfg.Simulation.City,
-			},
-			"dns_only_cname": map[string]any{
-				"record_type":           "CNAME",
-				"target":                "edge-dock.mtchship.net",
-				"third_party_proxying":  false,
-				"optional_root_records": []string{"ALIAS", "ANAME"},
-			},
-			"endpoints": map[string]string{
-				"primary_origin":        rs.cfg.Endpoints.PrimaryOrigin,
-				"backup_origin":         rs.cfg.Endpoints.BackupOrigin,
-				"object_storage_backup": rs.cfg.Endpoints.ObjectStorageBackup,
-			},
-			"standalone_addons": rs.cfg.StandaloneAddons,
+			"entity":               "Lovorise Ltd",
+			"third_party_proxying": false,
+			"routing_mode":         "DNS-Only CNAME",
+			"primary_origin":       rs.cfg.Endpoints.PrimaryOrigin,
+			"backup_origin":        rs.cfg.Endpoints.BackupOrigin,
+			"object_storage":       rs.cfg.Endpoints.ObjectStorageBackup,
 		})
 	})
 
