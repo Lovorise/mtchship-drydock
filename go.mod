@@ -1,4 +1,4 @@
-module ://github.com
+module mtchship-drydock
 
 go 1.23
 
