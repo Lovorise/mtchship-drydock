@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,6 +21,9 @@ import (
 
 	"://github.com"
 )
+
+//go:embed dashboard.html
+var dashboardHTML []byte
 
 type RuntimeState struct {
 	mu               sync.RWMutex
@@ -53,6 +57,7 @@ func (rs *RuntimeState) scrubAll() {
 		rs.scrubBuffer(v)
 		delete(rs.edgeState, k)
 	}
+	rs.zeroScrubPasses.Add(1)
 }
 
 func main() {
@@ -85,7 +90,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("[INFO] MTCHSHIP Drydock Control & Audit API listening on http://%s", cfg.Network.ControlAPIBind)
+		log.Printf("[INFO] MTCHSHIP Drydock Control Plane UI & Audit API listening on http://%s", cfg.Network.ControlAPIBind)
 		if err := controlSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("[FATAL] Control API server failed: %v", err)
 		}
@@ -191,6 +196,18 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
+	// Serve embedded Control Plane UI (cmd/drydock/dashboard.html)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(dashboardHTML)
+	})
+
 	// POST /api/v1/tier (Switch simulation tier: free | pro | business | enterprise)
 	mux.HandleFunc("/api/v1/tier", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -213,6 +230,20 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		default:
 			http.Error(w, "invalid tier (expected: free, pro, business, enterprise)", http.StatusBadRequest)
 		}
+	})
+
+	// POST /api/v1/scrub (Trigger deterministic 0x00 RAM scrubbing from UI)
+	mux.HandleFunc("/api/v1/scrub", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		rs.scrubAll()
+		writeJSON(w, http.StatusOK, map[string]any{
+			"scrubbed":     "0x00",
+			"scrub_passes": rs.zeroScrubPasses.Load(),
+			"bytes_zeroed": rs.zeroedBytesTotal.Load(),
+		})
 	})
 
 	// GET /api/v1/metrics (Latency quantiles, 0x00 zeroing counters & TCO benchmark)
