@@ -61,7 +61,7 @@ func (rs *RuntimeState) scrubAll() {
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args != "up" {
+	if len(os.Args) < 2 || os.Args[1] != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
 	}
 
