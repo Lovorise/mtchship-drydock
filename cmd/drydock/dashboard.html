@@ -125,15 +125,12 @@
     <div class="upgrade-box">
       <strong>30-Day Early Access Pilot</strong><br/>
       <span style="color:#4b5563;">48h–14d setup + 16d live evaluation</span><br/>
-      <span style="color:#6b7280;">support@mtchship.com</span>
-    </div>
-  </aside>
-  
+
   <div class="main">
     <header class="topbar">
       <div><strong>MTCHSHIP Edge</strong> <span style="color:#9ca3af;">/</span> <span id="topBreadcrumb" style="color:#4b5563;">Overview &amp; Tier Demo</span></div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <span class="chip-ok">AIR-GAPPED · persistent_disk_bytes: 0</span>
+        <span class="chip-ok" id="runtimeBadge">AIR-GAPPED · persistent_disk_bytes: 0</span>
         <select id="currencySel" title="1:1 Numerical Parity">
           <option value="GBP">UK B2B · GBP (£) + 20% UK VAT</option>
           <option value="USD">Global B2B (Non-UK) · USD ($) · No UK VAT</option>
@@ -232,8 +229,13 @@
         </div>
 
         <div class="card" id="manifestCard" style="display:none;">
-          <h2>Cutover Manifest (<code>/api/v1/promote</code>)</h2>
-          <div class="c-sub">Ready to submit to <strong>support@mtchship.com</strong> for production onboarding.</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div>
+              <h2>Cutover Manifest (<code>/api/v1/promote</code>)</h2>
+              <div class="c-sub" style="margin-bottom:0;">Ready to submit to <strong>support@mtchship.com</strong> for production onboarding.</div>
+            </div>
+            <button type="button" class="btn" id="copyManifestBtn" onclick="copyManifest()">Copy JSON</button>
+          </div>
           <div class="console" id="manifestOutput"></div>
         </div>
 
@@ -304,7 +306,6 @@
         <div class="card">
           <h2>Add a Subdomain to Your Simulation</h2>
           <div class="c-sub">Add unlimited subdomains below to preview them in your cutover manifest:</div>
-          
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
             <select id="newRecordType">
               <option value="DNS-Only CNAME">Subdomain (DNS-Only CNAME)</option>
@@ -493,6 +494,34 @@
         </div>
 
         <div class="card">
+          <h2>Security Controls by Plan Tier</h2>
+          <div class="c-sub">Post-Quantum TLS 1.3 and driver-level XDP DDoS mitigation are included in every plan.</div>
+          <div class="row">
+            <div><strong>Hybrid Post-Quantum TLS 1.3 (X25519MLKEM768) &amp; L7 WAF</strong><div class="row-desc">Protects active sessions today against harvest-now, decrypt-later quantum threats.</div></div>
+            <span class="pill active">Included (Pro+)</span>
+          </div>
+          <div class="row">
+            <div><strong>Bulkhead Isolation &amp; Quantum Mesh (WireGuard/mTLS)</strong><div class="row-desc">Per-tenant isolation and encrypted inter-hub backbone routing.</div></div>
+            <span class="pill" id="secBusinessPill">Business+</span>
+          </div>
+          <div class="row">
+            <div><strong>Cargo Seal (HMAC / Ed25519 Origin Signing)</strong><div class="row-desc">Cryptographically signs requests to your origin so you can verify traffic came exclusively through MTCHSHIP.</div></div>
+            <span class="pill" id="secCargoPill">Business+</span>
+          </div>
+          <div class="row">
+            <div><strong>Harbor Defense (SASE &amp; Zero-Trust Stream Filtering)</strong><div class="row-desc">Advanced edge token enforcement and SASE filtering.</div></div>
+
+      <!-- 05: SEALED HOLD -->
+      <section id="page-sealed" class="page-view">
+        <div class="eyebrow">Execution Plane 05 / Sealed Hold (ZK-PoR)</div>
+        <div class="header-row">
+          <div>
+            <h1>Zero-Knowledge DDR5 RAM Enclaves (<code>Sealed Hold</code>).</h1>
+            <p>Hardware-encrypted memory (AMD SEV-SNP / Intel TDX) + SmartNIC IOMMU DMA protection + Customer BYOK encryption.</p>
+          </div>
+        </div>
+
+        <div class="card">
           <h2>5 Zero-Knowledge Enclave Capabilities (Click to Test)</h2>
           <div class="c-sub">Trigger a simulated Ballast Proof (<code>ZK-PoR</code>) remote attestation with immediate <code>0x00</code> RAM zeroing:</div>
           <div class="row">
@@ -653,6 +682,30 @@
             </thead>
             <tbody>
               <tr>
+                <td><strong>Pro</strong></td>
+                <td>Data Plane + All 7 Harbor APIs + Unlimited DNS-Only Subdomains</td>
+                <td><strong id="billPro">£250 / mo</strong></td>
+                <td>One-time bare-metal setup fee + Minute-fast CNAME onboarding</td>
+              </tr>
+              <tr>
+                <td><strong>Business</strong></td>
+                <td>Pro + Bulkhead Isolation, Quantum Mesh &amp; Cargo Seal</td>
+                <td><strong id="billBusiness">£1,000 / mo</strong></td>
+                <td>One-time bare-metal setup fee + Minute-fast CNAME onboarding</td>
+              </tr>
+              <tr>
+                <td><strong>Enterprise</strong></td>
+                <td>Business + Harbor Defense (SASE) &amp; Engine Room Compute</td>
+                <td><strong id="billEnterprise">£5,000 / mo</strong></td>
+                <td>One-time bare-metal setup fee + Minute-fast CNAME onboarding</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <script>
     const state = {
       tier: 'enterprise',
@@ -689,10 +742,17 @@
       renderAll();
     });
 
-    function selectTier(tier) {
+    async function selectTier(tier) {
       state.tier = tier;
       document.querySelectorAll('.tier-btn').forEach(b => b.classList.toggle('selected', b.dataset.tier === tier));
       renderAll();
+      try {
+        await fetch('/api/v1/tier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier: tier })
+        });
+      } catch (_) {}
     }
 
     function toggleBillingCycle() {
@@ -783,20 +843,46 @@
       }, 450);
     }
 
-    function scrubAllRam() {
+    async function scrubAllRam() {
       document.querySelectorAll('#overviewRamGrid .ram-cell').forEach(c => {
         c.classList.remove('busy');
         c.textContent = '0x00';
       });
-      state.zeroedCount += 64;
+      try {
+        const res = await fetch('/api/v1/scrub', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          state.zeroedCount += 64 + (data.scrub_passes || 0);
+        } else {
+          state.zeroedCount += 64;
+        }
+      } catch (_) {
+        state.zeroedCount += 64;
+      }
       document.getElementById('kpiZeroedCount').textContent = state.zeroedCount.toLocaleString('en-GB');
     }
-    function exportCutoverManifest() {
+
+    async function exportCutoverManifest() {
       const card = document.getElementById('manifestCard');
       card.style.display = 'block';
-      const manifest = {
+
+      let baseManifest = {
+        manifest_version: "1.0.0",
+        provider: "Lovorise Ltd",
+        onboarding_email: "support@mtchship.com",
+        selected_tier: state.tier
+      };
+
+      try {
+        const res = await fetch('/api/v1/promote');
+        if (res.ok) {
+          baseManifest = await res.json();
+        }
+      } catch (_) {}
+
+      const fullManifest = {
+        ...baseManifest,
         control_plane: "127.0.0.1:9090",
-        selected_tier: TIER_PRICES[state.tier].label,
         billing_model: "Fixed Flat Rate (Unmetered Bandwidth & Requests)",
         currency: state.currency,
         preferred_hub: document.getElementById('regionSel').value,
@@ -805,15 +891,20 @@
           mode: "DNS-Only (Third-Party Proxy Disabled — Preserves Customer Frontend CDN)",
           unlimited_subdomains: true,
           records: state.domains
-        },
-        failover_policy: {
-          primary_to_backup_ms: "< 50",
-          dual_failure_countdown_sec: 5,
-          post_countdown_action: "0x00_RAM_ZERO_OR_SEALED_HOLD"
         }
       };
-      document.getElementById('manifestOutput').textContent = JSON.stringify(manifest, null, 2);
+
+      document.getElementById('manifestOutput').textContent = JSON.stringify(fullManifest, null, 2);
       card.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyManifest() {
+      const text = document.getElementById('manifestOutput').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyManifestBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy JSON'; }, 1500);
+      });
     }
 
     function renderDomains() {
@@ -948,8 +1039,25 @@
       }).join('');
     }
 
+    async function syncFromDrydock() {
+      try {
+        const res = await fetch('/api/v1/metrics');
+        if (!res.ok) return;
+        const m = await res.json();
+        if (m.active_tier && TIER_PRICES[m.active_tier]) {
+          state.tier = m.active_tier;
+          document.querySelectorAll('.tier-btn').forEach(b => b.classList.toggle('selected', b.dataset.tier === state.tier));
+        }
+        if (m.ram_zeroing && typeof m.ram_zeroing.scrub_passes === 'number') {
+          state.zeroedCount += m.ram_zeroing.scrub_passes;
+        }
+        renderAll();
+      } catch (_) {}
+    }
+
     initRamGrid();
     renderAll();
+    syncFromDrydock();
   </script>
 </body>
 </html>
