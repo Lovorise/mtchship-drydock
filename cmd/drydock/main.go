@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"://github.com"
+	"mtchship-drydock/internal/config"
 )
 
 //go:embed dashboard.html
@@ -61,7 +61,7 @@ func (rs *RuntimeState) scrubAll() {
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "up" {
+	if len(os.Args) < 2 || os.Args != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
 	}
 
@@ -114,7 +114,6 @@ func main() {
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Root & Health status (checked by CI smoke test)
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"status":                "ok",
@@ -126,7 +125,6 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux.HandleFunc("/", healthHandler)
 	mux.HandleFunc("/healthz", healthHandler)
 
-	// Built-in Harbor API: Edge State API (volatile DDR5 RAM state with 0x00 scrubbing)
 	mux.HandleFunc("/api/v1/state/", func(w http.ResponseWriter, r *http.Request) {
 		key := strings.TrimPrefix(r.URL.Path, "/api/v1/state/")
 		if key == "" {
@@ -179,7 +177,6 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 		}
 	})
 
-	// Compass SDK SSE stream endpoint (/live/stream)
 	mux.HandleFunc("/live/stream", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
@@ -198,7 +195,6 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Serve embedded Control Plane UI (cmd/drydock/dashboard.html)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -210,7 +206,6 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		_, _ = w.Write(dashboardHTML)
 	})
 
-	// POST /api/v1/tier (Switch simulation tier: free | pro | business | enterprise)
 	mux.HandleFunc("/api/v1/tier", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -238,7 +233,6 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		}
 	})
 
-	// POST /api/v1/scrub (Execute deterministic 0x00 RAM scrub)
 	mux.HandleFunc("/api/v1/scrub", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -252,7 +246,6 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		})
 	})
 
-	// GET /api/v1/metrics (Audit counters & air-gapped invariants)
 	mux.HandleFunc("/api/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
 		rs.mu.RLock()
 		tier := rs.activeTier
@@ -267,7 +260,6 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		})
 	})
 
-	// GET /api/v1/promote (Export DNS-Only CNAME & BYOS/BYOD cutover manifest)
 	mux.HandleFunc("/api/v1/promote", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"entity":               "Lovorise Ltd",
