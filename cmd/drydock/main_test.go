@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"://github.com"
+	"mtchship-drydock/internal/config"
 )
 
 func testConfig() *config.Config {
@@ -66,7 +66,6 @@ func TestDataPlaneHealthAndEdgeState(t *testing.T) {
 	rs := newRuntimeState(testConfig())
 	mux := buildDataPlaneMux(rs)
 
-	// 1. Healthz check
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -75,7 +74,6 @@ func TestDataPlaneHealthAndEdgeState(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d", rec.Code)
 	}
 
-	// 2. Store volatile state
 	postReq := httptest.NewRequest(http.MethodPost, "/api/v1/state/test-key", bytes.NewBufferString("live-match-data"))
 	postRec := httptest.NewRecorder()
 	mux.ServeHTTP(postRec, postReq)
@@ -84,7 +82,6 @@ func TestDataPlaneHealthAndEdgeState(t *testing.T) {
 		t.Fatalf("expected 200 OK on state POST, got %d", postRec.Code)
 	}
 
-	// 3. Retrieve volatile state
 	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/state/test-key", nil)
 	getRec := httptest.NewRecorder()
 	mux.ServeHTTP(getRec, getReq)
@@ -93,7 +90,6 @@ func TestDataPlaneHealthAndEdgeState(t *testing.T) {
 		t.Fatalf("unexpected state GET response: %d %q", getRec.Code, getRec.Body.String())
 	}
 
-	// 4. Delete and 0x00 scrub state
 	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/state/test-key", nil)
 	delRec := httptest.NewRecorder()
 	mux.ServeHTTP(delRec, delReq)
@@ -107,7 +103,6 @@ func TestControlPlaneEndpoints(t *testing.T) {
 	rs := newRuntimeState(testConfig())
 	mux := buildControlAPIMux(rs)
 
-	// 1. Switch Tier (POST /api/v1/tier)
 	tierBody := bytes.NewBufferString(`{"tier":"business"}`)
 	tierReq := httptest.NewRequest(http.MethodPost, "/api/v1/tier", tierBody)
 	tierRec := httptest.NewRecorder()
@@ -125,7 +120,6 @@ func TestControlPlaneEndpoints(t *testing.T) {
 		t.Fatalf("expected active_tier 'business', got %v", tierResp["active_tier"])
 	}
 
-	// 2. Scrub RAM (POST /api/v1/scrub)
 	scrubReq := httptest.NewRequest(http.MethodPost, "/api/v1/scrub", nil)
 	scrubRec := httptest.NewRecorder()
 	mux.ServeHTTP(scrubRec, scrubReq)
@@ -134,7 +128,6 @@ func TestControlPlaneEndpoints(t *testing.T) {
 		t.Fatalf("expected 200 OK on /api/v1/scrub, got %d", scrubRec.Code)
 	}
 
-	// 3. Metrics (GET /api/v1/metrics)
 	metricsReq := httptest.NewRequest(http.MethodGet, "/api/v1/metrics", nil)
 	metricsRec := httptest.NewRecorder()
 	mux.ServeHTTP(metricsRec, metricsReq)
@@ -143,7 +136,6 @@ func TestControlPlaneEndpoints(t *testing.T) {
 		t.Fatalf("expected 200 OK on /api/v1/metrics, got %d", metricsRec.Code)
 	}
 
-	// 4. Promote Manifest (GET /api/v1/promote)
 	promoteReq := httptest.NewRequest(http.MethodGet, "/api/v1/promote", nil)
 	promoteRec := httptest.NewRecorder()
 	mux.ServeHTTP(promoteRec, promoteReq)
