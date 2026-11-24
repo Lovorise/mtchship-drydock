@@ -1,31 +1,22 @@
-# MTCHSHIP Drydock Local Configuration (100% Air-Gapped)
-# Entity: Lovorise Ltd (UK Company No. 15814939)
-
-runtime:
-  mode: "air_gapped"
-  air_gapped: true
-  persistent_disk_bytes: 0
-  disable_swap: true
-  mlockall: true
-  zero_byte_scrub: 0x00
+# MTCHSHIP Drydock Configuration (100% Air-Gapped Localhost Runtime)
+# Entity: Lovorise Ltd (UK Company No. 15814939) · License: Apache-2.0
 
 network:
   data_plane_bind: "127.0.0.1:8443"
   control_api_bind: "127.0.0.1:9090"
   failover_target_ms: 50
-  dual_failure_countdown_sec: 5
+
+runtime:
+  air_gapped: true
+  persistent_disk_bytes: 0
+  disable_swap: true
+  mlockall: true
+  zero_pattern: "0x00"
 
 simulation:
-  # Options: free | pro | business | enterprise
-  # Note: 'free' allows testing Standalone Add-ons with no Core Plan required.
-  default_tier: "pro"
-  region: "Europe" # Options: Europe | Middle East | APAC | North America | South America | Africa
+  default_tier: "enterprise"   # free | pro | business | enterprise
+  region: "Europe"
   city: "London"
-
-endpoints:
-  primary_origin: "http://127.0.0.1:18080"
-  backup_origin: "http://127.0.0.1:18081"
-  object_storage_backup: "http://127.0.0.1:18082"
 
 harbor_api:
   enabled: true
@@ -38,28 +29,20 @@ harbor_api:
     - "forms"
     - "edge_state"
 
-# Standalone Add-ons (Custom Hardware Planes - No Core Plan Required)
-# Customer selects Destination and Bandwidth (Gbps) or DDR5 RAM (GB).
-# Underlying bare-metal hardware, SmartNICs, and TEE enclaves are provisioned and managed by Lovorise Ltd.
+endpoints:
+  primary_origin: "http://127.0.0.1:18080"
+  backup_origin: "http://127.0.0.1:18081"
+  object_storage_backup: "http://127.0.0.1:19000"
+  dual_failure_countdown_sec: 5
+
 standalone_addons:
   gpu_forge_harbor:
     enabled: false
-    region: "Europe"
-    city: "London"
-    # Presets: 10 | 20 | 40, or any custom positive integer (e.g. 100)
-    bandwidth_gbps: 10
-
+    bandwidth_gbps: 10         # 10 | 20 | 40
   stream_harbor:
     enabled: false
-    region: "Europe"
-    city: "London"
-    # Presets: 10 | 20 | 40, or any custom positive integer (e.g. 100)
-    bandwidth_gbps: 10
-
+    bandwidth_gbps: 10         # 10 | 20 | 40
   sealed_hold:
     enabled: false
-    region: "Europe"
-    city: "London"
-    # Presets: 192 | 384 | 768, or any custom positive integer (e.g. 1536)
-    ddr5_ram_gb: 192
-    byok_public_key_fingerprint: ""
+    ddr5_ram_gb: 192           # 192 | 384 | 768
+    enclave_mode: "AMD SEV-SNP / Intel TDX"
