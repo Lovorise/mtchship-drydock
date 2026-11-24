@@ -1,2 +1,5 @@
-      - name: Resolve Go dependencies
+      - name: Generate go.sum
         run: go mod tidy
+
+      - name: Run Unit & Race Tests
+        run: go test -race -v ./...
