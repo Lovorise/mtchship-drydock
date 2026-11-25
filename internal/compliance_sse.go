@@ -2,7 +2,6 @@ package internal
 
 import (
 	"crypto/rand"
-	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,9 +9,6 @@ import (
 	"sync"
 	"time"
 )
-
-//go:embed ui/compliance.html
-var compassComplianceHTML []byte
 
 type ComplianceReceipt struct {
 	Framework        string            `json:"framework"`
@@ -37,16 +33,8 @@ func PublishComplianceReceipt(evt ComplianceReceipt) {
 	}
 }
 
-// RegisterComplianceRoutes binds both the live SSE stream and the embedded Compass Compliance UI.
 func RegisterComplianceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/compliance/receipts", HandleComplianceReceiptsSSE)
-	mux.HandleFunc("/compass", HandleCompassComplianceUI)
-}
-
-func HandleCompassComplianceUI(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write(compassComplianceHTML)
 }
 
 func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
