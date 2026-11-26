@@ -1,8 +1,8 @@
 /**
- * MTCHSHIP Compass: Data Intelligence UI — Deterministic In-RAM Solver (PART 1 / 2)
+ * MTCHSHIP Compass: Data Intelligence UI — Deterministic In-RAM Solver
  * Path: compass-ui/data-intelligence/solver.js
  * Zero third-party libraries, zero external dependencies, deterministic CPU-only execution.
- * Supports CSV, JSON, and Digital PDF (X/Y coordinate reconstruction) + 0x00 buffer zeroing.
+ * Supports CSV, JSON, and Digital PDF (DecompressionStream + X/Y coordinate reconstruction) + 0x00 buffer zeroing.
  *
  * Copyright © 2026 Lovorise Ltd (England & Wales, Company No. 15814939).
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -139,6 +139,35 @@ export function wipeBuffer0x00(bufferOrView) {
     wipedAt: new Date().toISOString(),
   };
 }
+
+/**
+ * Zero-Dependency Digital PDF Text & X/Y Coordinate Extractor
+ * Uses native Web Streams DecompressionStream('deflate') for FlateDecode content streams.
+ */
+export async function extractPdfItemsFromBuffer(uint8View) {
+  const bytes = uint8View instanceof Uint8Array ? uint8View : new Uint8Array(uint8View);
+  const latin1 = new TextDecoder('latin1').decode(bytes);
+  const items = [];
+  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let match;
+  let streamIdx = 0;
+
+  while ((match = streamRegex.exec(latin1)) !== null) {
+    const rawStreamStr = match[1];
+    const startOffset = match.index + match[0].indexOf(rawStreamStr);
+    const slice = bytes.slice(startOffset, startOffset + rawStreamStr.length);
+    let content = rawStreamStr;
+
+    if (typeof DecompressionStream === 'function') {
+      try {
+        const ds = new DecompressionStream('deflate');
+        const writer = ds.writable.getWriter();
+        writer.write(slice);
+        writer.close();
+        const outBuf = await new Response(ds.readable).arrayBuffer();
+        content = new TextDecoder('latin1').decode(new Uint8Array(outBuf));
+      } catch (_) {
+        content = rawStreamStr;
 export function createCompassSolver(userConfig = {}) {
   const regionPreset = userConfig.region
     ? CONTROL_PLANE_REGIONS[String(userConfig.region).toUpperCase()] || {}
@@ -156,6 +185,18 @@ export function createCompassSolver(userConfig = {}) {
       },
     ])
   );
+
+  for (const [code, override] of Object.entries(regionPreset.currencies || {})) {
+    const upper = code.toUpperCase();
+    const existing = currencies.get(upper) || {
+      code: upper,
+      decimals: 2,
+      symbol: GLYPH_BY_CODE[upper] || `${upper} `,
+      roundingStep: null,
+      isIso4217: true,
+    };
+    currencies.set(upper, { ...existing, ...override, code: upper });
+  }
 
   const glyphMap = new Map(
     Object.entries({
@@ -205,6 +246,8 @@ export function createCompassSolver(userConfig = {}) {
 
     profiles.set(key, {
       name: key,
+      label: profileDef.label || key,
+      hub: profileDef.hub || 'Global',
       defaultCurrency: profileDef.defaultCurrency ? String(profileDef.defaultCurrency).toUpperCase() : null,
       defaultTaxRate: profileDef.defaultTaxRate !== undefined ? profileDef.defaultTaxRate : null,
       patterns: {
@@ -218,6 +261,15 @@ export function createCompassSolver(userConfig = {}) {
       extractMetrics: typeof profileDef.extractMetrics === 'function' ? profileDef.extractMetrics : null,
     });
     return api;
+  }
+
+  function listProfiles() {
+    return Array.from(profiles.values()).map((p) => ({
+      name: p.name,
+      label: p.label,
+      hub: p.hub,
+      defaultCurrency: p.defaultCurrency,
+    }));
   }
 
   function use(pluginOrHooks) {
@@ -259,6 +311,22 @@ export function createCompassSolver(userConfig = {}) {
       return Math.round((stepped + Math.sign(stepped) * Number.EPSILON) * factor) / factor;
     }
     return Math.round((num + Math.sign(num) * Number.EPSILON) * factor) / factor;
+  }
+
+  function formatCurrency(num, currency = defaultCurrency, locale = defaultLocale) {
+    const code = String(currency || defaultCurrency).toUpperCase();
+    const meta = getCurrencyMeta(code);
+    const val = roundAmount(Number(num) || 0, code);
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: meta.decimals,
+        maximumFractionDigits: meta.decimals,
+      }).format(val);
+    } catch (_) {
+      return `${val < 0 ? '-' : ''}${meta.symbol}${Math.abs(val).toFixed(meta.decimals)}`;
+    }
   }
 
   function parseAmount(rawInput, parseOptions = {}) {
@@ -405,217 +473,7 @@ export function createCompassSolver(userConfig = {}) {
     const activeGlyphs = new Map([...glyphMap, ...Object.entries(options.glyphs || {})]);
     const taxRate = options.taxRate !== undefined ? options.taxRate : profile.defaultTaxRate;
     const fallbackCurrency = String(
-      options.defaultCurrency || profile.defaultCurrency || defaultCurrency
-    ).toUpperCase();
-
-    let lines = [...inputLines].map(normalizeDigits);
-    for (const fn of hooks.beforeParse) {
-      lines = fn(lines, options) || lines;
-    }
-
-    const state = {
-      profile: profile.name,
-      docId: options.defaultDocId || 'COMPASS-DOC',
-      docDate: null,
-      currency: options.currency ? String(options.currency).toUpperCase() : '',
-      currencySource: options.currency ? 'explicit' : 'fallback',
-      net: 0,
-      tax: 0,
-      gross: 0,
-      lineItems: [],
-      customMetrics: {},
-      warnings: [],
-    };
-
-    for (let rowIndex = 0; rowIndex < lines.length; rowIndex++) {
-      const rawLine = lines[rowIndex];
-      let scrubLine = rawLine;
-
-      if (!state.currency) {
-        const codeTokens = rawLine.match(/\b[A-Z]{2,5}\b/g) || [];
-        for (const token of codeTokens) {
-          if (currencies.has(token)) {
-            state.currency = token;
-            state.currencySource = 'code';
-            break;
-          }
-        }
-        if (!state.currency) {
-          for (const [glyph, code] of activeGlyphs.entries()) {
-            if (rawLine.includes(glyph)) {
-              state.currency = code;
-              state.currencySource = 'glyph';
-                            break;
-            }
-          }
-        }
-      }
-
-      const dateMatches = scrubLine.match(patterns.date);
-      if (dateMatches) {
-        if (!state.docDate) state.docDate = dateMatches;
-        scrubLine = scrubLine.replace(patterns.date, ' ');
-      }
-
-      if (state.docId === (options.defaultDocId || 'COMPASS-DOC') && patterns.docId) {
-        const idMatch = scrubLine.match(patterns.docId);
-        if (idMatch && /\d/.test(idMatch)) {
-          state.docId = idMatch.toUpperCase();
-          scrubLine = scrubLine.replace(idMatch, ' ');
-        }
-      }
-
-      for (const rule of profile.metricRules) {
-        const rx = compileRegex(rule.regex, null);
-        if (!rx) continue;
-        const m = rawLine.match(rx);
-        if (m && m) {
-          const parsedVal = parseAmount(m, options);
-          if (Number.isFinite(parsedVal)) {
-            const factor = rule.multiplier || 1;
-            const prev = state.customMetrics[rule.key] || 0;
-            state.customMetrics[rule.key] =
-              rule.aggregate === 'last' ? parsedVal * factor : prev + parsedVal * factor;
-          }
-        }
-      }
-
-      const amountTokens = scrubLine.match(
-        /(?:[-+(]\s*)?(?:[\d]{1,3}(?:[.,'\s][\d]{3})+|[\d]+)(?:[.,][\d]{1,4})?(?:\s*[-)])?/g
-      );
-
-      let parsedLine = null;
-      if (amountTokens && amountTokens.length > 0) {
-        const candidateStr = amountTokens[amountTokens.length - 1];
-        const amount = parseAmount(candidateStr, options);
-
-        if (Number.isFinite(amount) && amount !== 0) {
-          let role = 'item';
-          if (patterns.gross?.test(rawLine)) role = 'gross';
-          else if (patterns.tax?.test(rawLine)) role = 'tax';
-          else if (patterns.net?.test(rawLine)) role = 'net';
-
-          const description = scrubLine
-            .replace(candidateStr, '')
-            .replace(/[|]+/g, ' ')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-
-          parsedLine = { rowIndex, rawLine, role, description, amount };
-        }
-      }
-
-      for (const fn of hooks.afterLine) {
-        parsedLine = fn(parsedLine, { rowIndex, rawLine, state, options });
-      }
-
-      if (parsedLine) {
-        if (parsedLine.role === 'gross') state.gross = parsedLine.amount;
-        else if (parsedLine.role === 'tax') state.tax += parsedLine.amount;
-        else if (parsedLine.role === 'net') state.net = parsedLine.amount;
-        else if (parsedLine.description) {
-          state.lineItems.push({
-            rowIndex: parsedLine.rowIndex,
-            description: parsedLine.description,
-            amount: parsedLine.amount,
-          });
-        }
-      }
-    }
-
-    if (!state.currency) {
-      state.currency = fallbackCurrency;
-      state.warnings.push(`Currency not detected in source; defaulted to ${fallbackCurrency}.`);
-    }
-
-    const meta = getCurrencyMeta(state.currency);
-
-    if (profile.extractMetrics) {
-      Object.assign(state.customMetrics, profile.extractMetrics(lines, state, options) || {});
-    }
-
-    for (const fn of hooks.beforeReconcile) {
-      fn(state, options);
-    }
-
-    const itemsSum = roundAmount(
-      state.lineItems.reduce((sum, item) => sum + item.amount, 0),
-      state.currency
-    );
-
-    if (state.net === 0 && itemsSum !== 0 && state.gross === 0) {
-      state.net = itemsSum;
-    }
-
-    if (typeof taxRate === 'number') {
-      if (state.gross > 0 && state.net === 0 && state.tax === 0) {
-        state.net = roundAmount(state.gross / (1 + taxRate), state.currency);
-        state.tax = roundAmount(state.gross - state.net, state.currency);
-      } else if (state.net > 0 && state.gross === 0 && state.tax === 0) {
-        state.tax = roundAmount(state.net * taxRate, state.currency);
-        state.gross = roundAmount(state.net + state.tax, state.currency);
-      }
-    }
-
-    if (state.gross > 0 && state.net > 0 && state.tax === 0) {
-      state.tax = roundAmount(state.gross - state.net, state.currency);
-    } else if (state.gross > 0 && state.tax > 0 && state.net === 0) {
-      state.net = roundAmount(state.gross - state.tax, state.currency);
-    } else if (state.net > 0 && state.tax > 0 && state.gross === 0) {
-      state.gross = roundAmount(state.net + state.tax, state.currency);
-    } else if (state.gross === 0 && state.net > 0 && state.tax === 0 && taxRate === null) {
-      state.gross = state.net;
-    }
-
-    state.net = roundAmount(state.net, state.currency);
-    state.tax = roundAmount(state.tax, state.currency);
-    state.gross = roundAmount(state.gross, state.currency);
-
-    const expectedGross = roundAmount(state.net + state.tax, state.currency);
-    const delta = roundAmount(Math.abs(expectedGross - state.gross), state.currency);
-    const mathBalanced = delta <= (meta.roundingStep || 0.02);
-
-    let confidence = 0.4;
-    if (state.currencySource !== 'fallback') confidence += 0.2;
-    if (state.docDate) confidence += 0.15;
-    if (state.gross !== 0 || state.lineItems.length > 0) confidence += 0.15;
-    if (mathBalanced) {
-      confidence += 0.1;
-    } else if (state.gross !== 0 && state.net !== 0) {
-      state.warnings.push(`Cross-check discrepancy: Net + Tax (${expectedGross}) != Gross (${state.gross}).`);
-    }
-
-    let result = {
-      industry: state.profile,
-      docId: state.docId,
-      docDate: state.docDate,
-      currency: state.currency,
-      decimals: meta.decimals,
-      net: state.net,
-      tax: state.tax,
-      gross: state.gross,
-      lineItems: state.lineItems,
-      customMetrics: state.customMetrics,
-      crossCheck: {
-        balanced: mathBalanced,
-        expectedGross,
-        actualGross: state.gross,
-        delta,
-      },
-      intelligence: {
-        confidence: Math.round(Math.min(confidence, 1) * 100) / 100,
-        currencySource: state.currencySource,
-        warnings: state.warnings,
-      },
-    };
-
-    for (const fn of hooks.afterSolve) {
-      result = fn(result, options) || result;
-    }
-
-    return result;
-  }
-  function solveInRAM(input, options = {}) {
+  async function solveInRAM(input, options = {}) {
     const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
     let rawBuffer = null;
     let textContent = '';
@@ -630,9 +488,17 @@ export function createCompassSolver(userConfig = {}) {
     }
 
     const format = String(options.format || '').toLowerCase();
+    const isPdf = format === 'pdf' || (rawBuffer && rawBuffer.length >= 4 && rawBuffer === 0x25 && rawBuffer === 0x50 && rawBuffer === 0x44 && rawBuffer === 0x46);
     let solved;
 
-    if (Array.isArray(input) && input.length > 0 && typeof input === 'object' && 'x' in input && 'y' in input) {
+    if (isPdf && rawBuffer) {
+      const pdfCoords = await extractPdfItemsFromBuffer(rawBuffer);
+      const lines = pdfCoords.length > 0
+        ? reconstructRows(pdfCoords, options)
+        : textContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      solved = solveLines(lines, options);
+      solved.sourceFormat = 'digital-pdf';
+    } else if (Array.isArray(input) && input.length > 0 && typeof input === 'object' && 'x' in input && 'y' in input) {
       const lines = reconstructRows(input, options);
       solved = solveLines(lines, options);
       solved.sourceFormat = 'digital-pdf-coords';
@@ -765,288 +631,57 @@ export function createCompassSolver(userConfig = {}) {
       netCashflow: roundAmount(roundedIngress - roundedEgress, code),
       ingressBytes,
       egressBytes,
-      liveDataIntelligenceActive: liveEgressCount > 0,
-      liveEgressStreams: liveEgressCount,
-      persistentDiskBytes: 0,
-      count: normalizedEntries.length,
+      liveEgressCount,
       entries: normalizedEntries,
-    };
-  }
-
-  function formatCurrency(amount, currency = defaultCurrency, options = {}) {
-    const code = String(currency || defaultCurrency).toUpperCase();
-    const meta = getCurrencyMeta(code);
-    const val = roundAmount(Number(amount) || 0, code);
-    const locale = options.locale || defaultLocale;
-
-    if (locale && meta.isIso4217) {
-      try {
-        return new Intl.NumberFormat(locale, {
-          style: 'currency',
-          currency: code,
-          minimumFractionDigits: meta.decimals,
-          maximumFractionDigits: meta.decimals,
-        }).format(val);
-      } catch {}
-    }
-
-    const isNegative = val < 0;
-    const fixed = Math.abs(val).toFixed(meta.decimals);
-    const [intPart, decPart] = fixed.split('.');
-    const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    const formattedNumber = decPart !== undefined ? `${groupedInt}.${decPart}` : groupedInt;
-
-    return `${isNegative ? '-' : ''}${meta.symbol}${formattedNumber}`;
-  }
-
-  function buildPresentation(docResult, options = {}) {
-    const currency = String(docResult?.currency || options.defaultCurrency || defaultCurrency).toUpperCase();
-    const net = docResult?.net ?? 0;
-    const tax = docResult?.tax ?? 0;
-    const gross = docResult?.gross ?? 0;
-
-    return {
-      id: docResult?.docId || 'COMPASS-DOC',
-      industry: docResult?.industry || 'universal',
-      sourceFormat: docResult?.sourceFormat || 'lines',
-      date: docResult?.docDate || null,
-      currency,
-      formatted: {
-        net: formatCurrency(net, currency, options),
-        tax: formatCurrency(tax, currency, options),
-        gross: formatCurrency(gross, currency, options),
-      },
-      waterfall: [
-        { step: 'Net', value: net, formatted: formatCurrency(net, currency, options), type: 'base' },
-        { step: 'Tax / VAT', value: tax, formatted: formatCurrency(tax, currency, options), type: 'delta' },
-        { step: 'Gross', value: gross, formatted: formatCurrency(gross, currency, options), type: 'total' },
-      ],
-      items: (docResult?.lineItems || []).map((item, idx) => ({
-        index: idx,
-        rowIndex: item.rowIndex ?? idx,
-        description: item.description,
-        amount: item.amount,
-        formattedAmount: formatCurrency(item.amount, currency, options),
-      })),
-      customMetrics: docResult?.customMetrics || {},
-      crossCheck: docResult?.crossCheck || { balanced: true, delta: 0 },
-      intelligence: docResult?.intelligence || { confidence: 0, warnings: [] },
-      memoryHygiene: docResult?.memoryHygiene || { wiped: false, persistentDiskBytes: 0 },
     };
   }
 
   const api = {
     registerCurrency,
     registerProfile,
+    listProfiles,
     use,
     getCurrencyMeta,
     isSupportedCurrency,
     roundAmount,
+    formatCurrency,
     parseAmount,
-    parseCSV,
     reconstructRows,
+    parseCSV,
     solveLines,
     solveInRAM,
-    wipeBuffer0x00,
     classifyDirection,
     summarizeFlows,
-    formatCurrency,
-    buildPresentation,
+    wipeBuffer0x00,
   };
 
-  registerProfile('universal', {});
-  registerProfile('uk-b2b', { defaultCurrency: 'GBP', defaultTaxRate: 0.2 });
-  registerProfile('global-b2b', { defaultCurrency: 'USD', defaultTaxRate: 0 });
-
-  if (regionPreset.currencies) {
-    for (const [code, spec] of Object.entries(regionPreset.currencies)) registerCurrency(code, spec);
-  }
-  if (userConfig.currencies) {
-    for (const [code, spec] of Object.entries(userConfig.currencies)) registerCurrency(code, spec);
-  }
-  if (userConfig.profiles) {
-    for (const [name, def] of Object.entries(userConfig.profiles)) registerProfile(name, def);
-  }
+  registerProfile('universal', { label: 'Global Universal (All Hubs)', hub: 'Global' });
+  registerProfile('europe-dach-uk', {
+    label: 'Europe · UK / DACH / CH FinTech (VAT/MwSt)',
+    hub: 'Europe (London Core)',
+    defaultCurrency: 'GBP',
+    metricRules: [{ key: 'vatAmount', regex: /(?:vat|mwst|ust|tva)[^\d]*([\d.,']+)/i }],
+  });
+  registerProfile('north-america-us', {
+    label: 'North America · US / CA Clearing & SaaS (Sales Tax)',
+    hub: 'North America',
+    defaultCurrency: 'USD',
+    patterns: { tax: /\b(?:sales tax|state tax|use tax|hst|gst|pst|tax)\b/i },
+    metricRules: [{ key: 'clearingVolume', regex: /(?:ach|wire|fednow|rtp)[^\d]*([\d.,]+)/i }],
+  });
+  registerProfile('apac-markets', {
+    label: 'APAC · Tokyo / Singapore / India (JCT / GST)',
+    hub: 'APAC',
+    defaultCurrency: 'JPY',
+    patterns: { tax: /(?:\b(?:gst|cgst|sgst|igst|jct|consumption tax)\b|消費税|消費稅|जीएसटी)/i },
+    metricRules: [{ key: 'rtbImpressions', regex: /(?:impressions|bids|auctions)[^\d]*([\d,]+)/i }],
+  });
+  registerProfile('mea-latam-africa', {
+    label: 'MEA / LATAM / Africa · Emerging Markets (VAT / IVA)',
+    hub: 'ME · SA · AF',
+    defaultCurrency: 'AED',
+    patterns: { tax: /(?:\b(?:vat|iva|icms|iss|pis|cofins)\b|ضريبة)/i },
+  });
 
   return api;
 }
-
-const defaultSolver = createCompassSolver({ region: 'UK' });
-
-export const roundCurrency = (num, decimals = 2) => {
-  if (!Number.isFinite(num)) return 0;
-  const factor = 10 ** decimals;
-  return Math.round((num + Math.sign(num) * Number.EPSILON) * factor) / factor;
-};
-export const getCurrencyDecimals = (currency) => defaultSolver.getCurrencyMeta(currency).decimals;
-export const isSupportedCurrency = (currency) => defaultSolver.isSupportedCurrency(currency);
-export const parseGlobalAmount = (rawInput, options) => defaultSolver.parseAmount(rawInput, options);
-export const reconstructRowsFromCoords = (items, options) => defaultSolver.reconstructRows(items, options);
-export const solveTabularLines = (lines, options) => defaultSolver.solveLines(lines, options);
-export const solveInRAM = (input, options) => defaultSolver.solveInRAM(input, options);
-      const label = entry?.label || entry?.description || entry?.stream || '';
-
-      const direction =
-        explicitDir === 'ingress' || explicitDir === 'inflow'
-          ? 'ingress'
-          : explicitDir === 'egress' || explicitDir === 'outflow'
-            ? 'egress'
-            : rawAmount < 0
-              ? 'egress'
-              : classifyDirection(label, rawAmount, options.extraIngressKeywords || []);
-
-      const liveDataIntelligence = direction === 'egress' && entry?.liveIntelligence !== false;
-
-      if (direction === 'ingress') {
-        ingress += absVal;
-        ingressBytes += bytes;
-      } else {
-        egress += absVal;
-        egressBytes += bytes;
-        if (liveDataIntelligence) liveEgressCount += 1;
-      }
-
-      normalizedEntries.push({
-        ...entry,
-        direction,
-        amount: roundAmount(absVal, code),
-        bytes,
-        liveDataIntelligence,
-      });
-    }
-
-    const roundedIngress = roundAmount(ingress, code);
-    const roundedEgress = roundAmount(egress, code);
-
-    return {
-      currency: code,
-      decimals: meta.decimals,
-      inflow: roundedIngress,
-      outflow: roundedEgress,
-      netCashflow: roundAmount(roundedIngress - roundedEgress, code),
-      ingressBytes,
-      egressBytes,
-      liveDataIntelligenceActive: liveEgressCount > 0,
-      liveEgressStreams: liveEgressCount,
-      persistentDiskBytes: 0,
-      count: normalizedEntries.length,
-      entries: normalizedEntries,
-    };
-  }
-
-  function formatCurrency(amount, currency = defaultCurrency, options = {}) {
-    const code = String(currency || defaultCurrency).toUpperCase();
-    const meta = getCurrencyMeta(code);
-    const val = roundAmount(Number(amount) || 0, code);
-    const locale = options.locale || defaultLocale;
-
-    if (locale && meta.isIso4217) {
-      try {
-        return new Intl.NumberFormat(locale, {
-          style: 'currency',
-          currency: code,
-          minimumFractionDigits: meta.decimals,
-          maximumFractionDigits: meta.decimals,
-        }).format(val);
-      } catch {}
-    }
-
-    const isNegative = val < 0;
-    const fixed = Math.abs(val).toFixed(meta.decimals);
-    const [intPart, decPart] = fixed.split('.');
-    const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    const formattedNumber = decPart !== undefined ? `${groupedInt}.${decPart}` : groupedInt;
-
-    return `${isNegative ? '-' : ''}${meta.symbol}${formattedNumber}`;
-  }
-
-  function buildPresentation(docResult, options = {}) {
-    const currency = String(docResult?.currency || options.defaultCurrency || defaultCurrency).toUpperCase();
-    const net = docResult?.net ?? 0;
-    const tax = docResult?.tax ?? 0;
-    const gross = docResult?.gross ?? 0;
-
-    return {
-      id: docResult?.docId || 'COMPASS-DOC',
-      industry: docResult?.industry || 'universal',
-      sourceFormat: docResult?.sourceFormat || 'lines',
-      date: docResult?.docDate || null,
-      currency,
-      formatted: {
-        net: formatCurrency(net, currency, options),
-        tax: formatCurrency(tax, currency, options),
-        gross: formatCurrency(gross, currency, options),
-      },
-      waterfall: [
-        { step: 'Net', value: net, formatted: formatCurrency(net, currency, options), type: 'base' },
-        { step: 'Tax / VAT', value: tax, formatted: formatCurrency(tax, currency, options), type: 'delta' },
-        { step: 'Gross', value: gross, formatted: formatCurrency(gross, currency, options), type: 'total' },
-      ],
-      items: (docResult?.lineItems || []).map((item, idx) => ({
-        index: idx,
-        rowIndex: item.rowIndex ?? idx,
-        description: item.description,
-        amount: item.amount,
-        formattedAmount: formatCurrency(item.amount, currency, options),
-      })),
-      customMetrics: docResult?.customMetrics || {},
-      crossCheck: docResult?.crossCheck || { balanced: true, delta: 0 },
-      intelligence: docResult?.intelligence || { confidence: 0, warnings: [] },
-      memoryHygiene: docResult?.memoryHygiene || { wiped: false, persistentDiskBytes: 0 },
-    };
-  }
-
-  const api = {
-    registerCurrency,
-    registerProfile,
-    use,
-    getCurrencyMeta,
-    isSupportedCurrency,
-    roundAmount,
-    parseAmount,
-    parseCSV,
-    reconstructRows,
-    solveLines,
-    solveInRAM,
-    wipeBuffer0x00,
-    classifyDirection,
-    summarizeFlows,
-    formatCurrency,
-    buildPresentation,
-  };
-
-  registerProfile('universal', {});
-  registerProfile('uk-b2b', { defaultCurrency: 'GBP', defaultTaxRate: 0.2 });
-  registerProfile('global-b2b', { defaultCurrency: 'USD', defaultTaxRate: 0 });
-
-  if (regionPreset.currencies) {
-    for (const [code, spec] of Object.entries(regionPreset.currencies)) registerCurrency(code, spec);
-  }
-  if (userConfig.currencies) {
-    for (const [code, spec] of Object.entries(userConfig.currencies)) registerCurrency(code, spec);
-  }
-  if (userConfig.profiles) {
-    for (const [name, def] of Object.entries(userConfig.profiles)) registerProfile(name, def);
-  }
-
-  return api;
-}
-
-const defaultSolver = createCompassSolver({ region: 'UK' });
-
-export const roundCurrency = (num, decimals = 2) => {
-  if (!Number.isFinite(num)) return 0;
-  const factor = 10 ** decimals;
-  return Math.round((num + Math.sign(num) * Number.EPSILON) * factor) / factor;
-};
-export const getCurrencyDecimals = (currency) => defaultSolver.getCurrencyMeta(currency).decimals;
-export const isSupportedCurrency = (currency) => defaultSolver.isSupportedCurrency(currency);
-export const parseGlobalAmount = (rawInput, options) => defaultSolver.parseAmount(rawInput, options);
-export const reconstructRowsFromCoords = (items, options) => defaultSolver.reconstructRows(items, options);
-export const solveTabularLines = (lines, options) => defaultSolver.solveLines(lines, options);
-export const solveInRAM = (input, options) => defaultSolver.solveInRAM(input, options);
-export const classifyCashflowDirection = (label, amount, extra) => defaultSolver.classifyDirection(label, amount, extra);
-export const summarizeCashflow = (entries, currency, options) => defaultSolver.summarizeFlows(entries, currency, options);
-export const formatCompassCurrency = (amount, currency, options) => defaultSolver.formatCurrency(amount, currency, options);
-export const buildCompassPresentation = (docResult, options) => defaultSolver.buildPresentation(docResult, options);
-
