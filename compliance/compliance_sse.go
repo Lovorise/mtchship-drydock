@@ -3,19 +3,18 @@ package compliance
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"embed"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-//go:embed index.html compass.js
-var compassAssets embed.FS
+//go:embed index.html
+var compassHTML []byte
 
 type ComplianceReceipt struct {
 	AuditID             string            `json:"audit_id"`
@@ -132,14 +131,11 @@ func signReceipt(evt *ComplianceReceipt) {
 
 // RegisterComplianceRoutes registers the Compass UI, SSE stream, OCSF audit export, and public key endpoints.
 func RegisterComplianceRoutes(mux *http.ServeMux) {
-	if subFS, err := fs.Sub(compassAssets, "."); err == nil {
-		fileServer := http.FileServer(http.FS(subFS))
-		mux.HandleFunc("/compass", func(w http.ResponseWriter, r *http.Request) {
-			r.URL.Path = "/index.html"
-			fileServer.ServeHTTP(w, r)
-		})
-		mux.HandleFunc("/compass.js", fileServer.ServeHTTP)
-	}
+	mux.HandleFunc("/compass", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(compassHTML)
+	})
 
 	mux.HandleFunc("/v1/compliance/receipts", HandleComplianceReceiptsSSE)
 	mux.HandleFunc("/v1/compliance/audit", HandleComplianceAuditJSON)
