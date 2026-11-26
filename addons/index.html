@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTCHSHIP // STREAM, GPU FORGE &amp; SEALED HOLD HARBORS</title>
+  <style>
+    :root { --bg:#f6f6f6; --card:#fff; --b:#e4e4e4; --bs:#ccc; --t:#111; --m:#666; --ok:#15803d; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; --sans:-apple-system,BlinkMacSystemFont,"Inter",sans-serif; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--t); font-family:var(--sans); line-height:1.45; }
+    header { background:var(--card); border-bottom:1px solid var(--b); padding:14px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .wordmark { font-weight:800; font-size:15px; letter-spacing:.28em; }
+    .sub-brand { font-family:var(--mono); font-size:11.5px; color:var(--m); }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; }
+    .sw { display:flex; background:var(--bg); border:1px solid var(--b); border-radius:5px; padding:3px; gap:3px; flex-wrap:wrap; }
+    .sw-btn { font-family:var(--mono); font-size:11px; padding:5px 9px; border:0; background:transparent; color:var(--m); border-radius:3px; cursor:pointer; }
+    .sw-btn.active { background:var(--t); color:#fff; }
+    main { max-width:1320px; margin:0 auto; padding:24px; }
+    .kicker { font-family:var(--mono); font-size:11px; color:var(--m); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+    h1 { font-size:26px; font-weight:600; letter-spacing:-.02em; }
+    .subtitle { font-size:13.5px; color:var(--m); margin:4px 0 18px; }
+    .banner { display:none; background:var(--card); border:1px solid var(--t); border-radius:6px; padding:12px 16px; margin-bottom:18px; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; font-size:13px; }
+    .banner.show { display:flex; }
+    .btn-dark { font-family:var(--mono); font-size:11px; background:var(--t); color:#fff; padding:7px 12px; border-radius:4px; text-decoration:none; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:18px; }
+    .grid-2 { display:grid; grid-template-columns:1.2fr 1fr; gap:16px; margin-bottom:18px; }
+    .card { background:var(--card); border:1px solid var(--b); border-radius:6px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; }
+    .tag { font-family:var(--mono); font-size:10.5px; color:var(--m); text-transform:uppercase; margin-bottom:5px; }
+    .title { font-size:17px; font-weight:600; margin-bottom:6px; }
+    .desc { font-size:13px; color:var(--m); margin-bottom:12px; }
+    .dest-box { background:var(--bg); border:1px solid var(--b); border-radius:5px; padding:9px 11px; margin-bottom:12px; }
+    .dest-box label { font-family:var(--mono); font-size:10px; color:var(--m); text-transform:uppercase; display:block; margin-bottom:4px; }
+    select { width:100%; font-family:var(--mono); font-size:12px; padding:6px 8px; background:var(--card); border:1px solid var(--bs); border-radius:4px; color:var(--t); }
+    .row { display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid var(--b); gap:10px; }
+    .row:last-child { border-bottom:0; padding-bottom:0; }
+    .row span:first-child { color:var(--m); }
+    .row span:last-child { font-family:var(--mono); font-weight:500; text-align:right; }
+    .slabs { display:grid; grid-template-columns:repeat(16,1fr); gap:4px; margin:12px 0; }
+    .slab { aspect-ratio:1; border-radius:2px; background:#efefef; border:1px solid #e0e0e0; }
+    .slab.on { background:var(--ok); border-color:var(--ok); }
+    .slab.off { background:var(--t); border-color:var(--t); }
+    pre { background:var(--t); color:#e5e5e5; font-family:var(--mono); font-size:11.5px; padding:14px; border-radius:5px; overflow-x:auto; line-height:1.5; }
+    .footer { background:var(--t); color:#fff; border-radius:6px; padding:18px 22px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+    .footer-sub { font-family:var(--mono); font-size:11px; color:#bdbdbd; margin-top:3px; }
+    @media (max-width:960px) { .grid-3,.grid-2 { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><span class="wordmark">MTCHSHIP</span> <span class="sub-brand">/ STREAM, GPU FORGE &amp; SEALED HOLD</span></div>
+    <div class="controls">
+      <div class="sw" id="tenantSw">
+        <button type="button" class="sw-btn active" data-m="single">Single-Tenant (No File Limits)</button>
+        <button type="button" class="sw-btn" data-m="multi">Multi-Tenant (Isolated)</button>
+      </div>
+      <div class="sw" id="portSw">
+        <button type="button" class="sw-btn active" data-p="10 Gbps">10 Gbps</button>
+        <button type="button" class="sw-btn" data-p="20 Gbps">20 Gbps</button>
+        <button type="button" class="sw-btn" data-p="40 Gbps">40 Gbps</button>
+        <button type="button" class="sw-btn" data-p="Custom">Custom (&gt;40 Gbps)</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="kicker">SPECIALIZED OTT STREAMING, AI COMPUTE &amp; OUTAGE RESERVE RAM ADD-ONS</div>
+    <h1>Dedicated Harbors for OTT Streaming, AI &amp; Failover RAM.</h1>
+    <p class="subtitle">Provisioned by customer-selected city destination — as dedicated Single-Tenant hardware with zero file-size limits, or isolated Multi-Tenant capacity. No Core Subscription required.</p>
+
+    <div class="banner" id="banner">
+      <div><strong>Custom Bandwidth (&gt; 40 Gbps) or On-Demand City PoP:</strong> Provisioned to your target cities within 48h–14 days.</div>
+      <a class="btn-dark" href="mailto:support@mtchship.com">Contact support@mtchship.com</a>
+    </div>
+
+    <section class="grid-3">
+      <div class="card">
+        <div>
+          <div class="tag">ULTRA-FAST OTT LIVE EDGE · <span class="p-val">10 Gbps</span></div>
+          <div class="title">Stream Harbor</div>
+          <p class="desc">Ultra-fast live streaming edge built for OTT platforms, live events, and zero-disk global media fan-out.</p>
+          <div class="dest-box">
+            <label>Target City / PoP Destination</label>
+            <select class="dest-sel">
+              <option>London, UK (Primary Core Hub)</option>
+              <option>Frankfurt, DE</option>
+              <option>Zurich, CH</option>
+              <option>New York / Ashburn, US</option>
+              <option>Singapore, SG</option>
+              <option>Dubai, UAE</option>
+              <option value="custom">+ Request Custom City / PoP...</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="row"><span>Workload</span><span>OTT Live Edge &amp; Broadcast</span></div>
+          <div class="row"><span>Provisioning</span><span class="t-mode">Single-Tenant Dedicated</span></div>
+          <div class="row"><span>File &amp; Stream Limits</span><span class="f-lim">Zero File-Size Limits</span></div>
+          <div class="row"><span>Port Capacity</span><span class="p-val">10 Gbps</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <div class="tag">AI &amp; MEDIA COMPUTE · <span class="p-val">10 Gbps</span></div>
+          <div class="title">GPU Forge Harbor</div>
+          <p class="desc">Dedicated GPU nodes for Visual Clerk, GPU MediaCargo Processor, and low-latency AI inference.</p>
+          <div class="dest-box">
+            <label>Target City / PoP Destination</label>
+            <select class="dest-sel">
+              <option>London, UK (Primary Core Hub)</option>
+              <option>Frankfurt, DE</option>
+              <option>Zurich, CH</option>
+              <option>New York / Ashburn, US</option>
+              <option>Singapore, SG</option>
+              <option>Dubai, UAE</option>
+              <option value="custom">+ Request Custom City / PoP...</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="row"><span>Pipeline</span><span>Visual Clerk &amp; MediaCargo</span></div>
+          <div class="row"><span>Provisioning</span><span class="t-mode">Single-Tenant Dedicated</span></div>
+          <div class="row"><span>Dataset &amp; File Limits</span><span class="f-lim">Zero File-Size Limits</span></div>
+          <div class="row"><span>Runtime</span><span>Diskless SquashFS RAM (-03)</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <div class="tag">OUTAGE RESERVE RAM · 192 / 384 / 768 GB</div>
+          <div class="title">Sealed Hold (ZK-PoR)</div>
+          <p class="desc">CPU-encrypted reserve DDR5 RAM vault for &gt;5s origin outages, dead-drops, and clean-room docks.</p>
+          <div class="dest-box">
+            <label>Target City / PoP Destination</label>
+            <select class="dest-sel">
+              <option>London, UK (Primary Core Hub)</option>
+              <option>Frankfurt, DE</option>
+              <option>Zurich, CH</option>
+              <option>New York / Ashburn, US</option>
+              <option>Singapore, SG</option>
+              <option>Dubai, UAE</option>
+              <option value="custom">+ Request Custom City / PoP...</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="row"><span>Enclave RAM</span><span>AMD SEV-SNP / Intel TDX</span></div>
+          <div class="row"><span>Vault Modules</span><span>Outage Vault · Phantom Cache · Dead-Drop</span></div>
+          <div class="row"><span>Proof</span><span>Transit Receipt &amp; Ballast Proof (ZK-PoR)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="tag">VOLATILE DDR5 MEMORY · 0 BYTES PERSISTENT DISK</div>
+        <div class="title">In-RAM Buffer &amp; 0x00 Sector Scrubbing</div>
+        <div class="slabs" id="slabs"></div>
+        <div class="tag">GREEN = ACTIVE OTT / AI / VAULT RAM · BLACK = 0x00 SCRUBBED + ED25519 RECEIPT</div>
+      </div>
+      <div class="card">
+        <div class="tag">OPEN-SOURCE CLIENT · APACHE-2.0</div>
+        <div class="title">Connect via @mtchship/compass SDK</div>
+        <pre>// TypeScript · Swift · Kotlin
+import { CompassClient } from '@mtchship/compass';
+
+const compass = new CompassClient({
+  endpoint: 'https://your-domain.com',
+  protocol: 'sse' // http2 | sse | grpc | ws
+});
+const stream = compass.subscribe('/v1/live');</pre>
+      </div>
+    </section>
+
+    <div class="footer">
+      <div>
+        <strong>Need &gt; 40 Gbps or a custom city PoP? Provisioned on demand.</strong>
+        <div class="footer-sub">Core API/Data Plane included in Pro, Business &amp; Enterprise · Specialized Harbors available standalone</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;">0B DISK · 0 FILE LIMITS · ZK-PoR</div>
+    </div>
+  </main>
+
+  <script>
+    const box = document.getElementById('slabs');
+    const cells = Array.from({ length: 64 }, () => {
+      const d = document.createElement('div');
+      d.className = 'slab';
+      box.appendChild(d);
+      return d;
+    });
+
+    function updateBanner() {
+      const isCustomPort = document.querySelector('#portSw .sw-btn.active')?.dataset.p === 'Custom';
+      const isCustomCity = Array.from(document.querySelectorAll('.dest-sel')).some(s => s.value === 'custom');
+      document.getElementById('banner').classList.toggle('show', isCustomPort || isCustomCity);
+    }
+
+    document.querySelectorAll('.dest-sel').forEach(s => {
+      s.addEventListener('change', updateBanner);
+    });
+
+    document.querySelectorAll('#portSw .sw-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#portSw .sw-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        const p = b.dataset.p;
+        document.querySelectorAll('.p-val').forEach(el => el.textContent = p === 'Custom' ? 'Custom (> 40 Gbps)' : p);
+        updateBanner();
+      });
+    });
+
+    document.querySelectorAll('#tenantSw .sw-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#tenantSw .sw-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        const single = b.dataset.m === 'single';
+        document.querySelectorAll('.t-mode').forEach(el => el.textContent = single ? 'Single-Tenant Dedicated' : 'Isolated Multi-Tenant');
+        document.querySelectorAll('.f-lim').forEach(el => el.textContent = single ? 'Zero File-Size Limits' : 'Custom Tenant Quotas');
+      });
+    });
+
+    setInterval(() => {
+      for (let i = 0; i < 4; i++) {
+        const c = cells[Math.floor(Math.random() * 64)];
+        c.className = 'slab on';
+        setTimeout(() => { c.className = 'slab off'; setTimeout(() => c.className = 'slab', 250); }, 200);
+      }
+    }, 380);
+  </script>
+</body>
+</html>
