@@ -1,0 +1,18 @@
+{
+  "product": "MTCHSHIP Compass UI",
+  "license": "Apache-2.0",
+  "defaultModule": "data-intelligence",
+  "modules": [
+    { "id": "network", "num": "01", "label": "Network", "path": "../network/index.html", "enabled": false },
+    { "id": "compute", "num": "02", "label": "Compute", "path": "../compute/index.html", "enabled": false },
+    { "id": "security", "num": "03", "label": "Security & 0x00 Audit", "path": "../security/index.html", "enabled": false },
+    { "id": "ai-workers", "num": "04", "label": "AI Workers", "path": "../ai-workers/index.html", "enabled": false },
+    { "id": "live-engagement", "num": "05", "label": "Live Engagement", "path": "../live-engagement/index.html", "enabled": false },
+    { "id": "application-apis", "num": "06", "label": "Application APIs", "path": "../application-apis/index.html", "enabled": false },
+    { "id": "data-intelligence", "num": "07", "label": "Data Intelligence", "path": "../data-intelligence/index.html", "enabled": true },
+    { "id": "activity", "num": "08", "label": "Activity", "path": "../activity/index.html", "enabled": false },
+    { "id": "billing", "num": "09", "label": "Billing", "path": "../billing/index.html", "enabled": false },
+    { "id": "team", "num": "10", "label": "Team", "path": "../team/index.html", "enabled": false },
+    { "id": "settings", "num": "11", "label": "Settings", "path": "../settings/index.html", "enabled": false }
+  ]
+}
