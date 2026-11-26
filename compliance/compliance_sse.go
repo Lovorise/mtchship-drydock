@@ -63,11 +63,11 @@ func PublishComplianceReceipt(evt ComplianceReceipt) {
 	if evt.Engine == "" {
 		evt.Engine = "Harbor Sovereign Gate"
 	}
-	if evt.CoreTier != "business" && evt.CoreTier != "enterprise" {
+	if evt.CoreTier != "pro" && evt.CoreTier != "business" && evt.CoreTier != "enterprise" {
 		evt.CoreTier = "enterprise"
 	}
 	if evt.Domain == "" {
-		evt.Domain = "://customer-group.com"
+		evt.Domain = "://customer.com"
 	}
 	if evt.CNAMEDirection == "" {
 		evt.CNAMEDirection = "egress"
@@ -263,7 +263,7 @@ func newSimulatedReceipt() ComplianceReceipt {
 		evt.PairedPlane = "Harbor Data Intelligence (Zero-Disk FinOps)"
 		evt.HubID = "eu-lon-01"
 		evt.Framework = "DORA / UK FCA / EU GDPR"
-		evt.EgressTarget = "Snowflake / Databricks / SAP"
+		evt.EgressTarget = "Zero-Disk BI / Warehouse Egress"
 		evt.CompressionRatio = "4.4x"
 		evt.LatencyUs = 28
 		evt.ZeroedBytes = 16384
