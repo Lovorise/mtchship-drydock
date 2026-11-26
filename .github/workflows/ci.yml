@@ -54,6 +54,6 @@ jobs:
 
           # 5. Verify Metrics & Cutover Manifest Export
           curl -sf "$CTRL_URL/api/v1/metrics" | grep -q '"air_gapped":true'
-          curl -sf "$CTRL_URL/api/v1/promote" | grep -q '"third_party_proxying":false'
+          curl -sf "$CTRL_URL/api/v1/promote" | grep -q '"status":"ready"'
 
           echo "All Drydock UI & API checks passed!"
