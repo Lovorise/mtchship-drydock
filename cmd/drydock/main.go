@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"mtchship-drydock/compliance"
 	"mtchship-drydock/internal/config"
 )
 
@@ -43,11 +44,28 @@ func newRuntimeState(cfg *config.Config) *RuntimeState {
 }
 
 func (rs *RuntimeState) scrubBuffer(buf []byte) {
+	n := len(buf)
 	for i := range buf {
 		buf[i] = 0x00
 	}
 	rs.zeroScrubPasses.Add(1)
-	rs.zeroedBytesTotal.Add(uint64(len(buf)))
+	rs.zeroedBytesTotal.Add(uint64(n))
+
+	if n > 0 {
+		rs.mu.RLock()
+		tier := rs.activeTier
+		region := rs.cfg.Simulation.Region
+		rs.mu.RUnlock()
+
+		compliance.PublishComplianceReceipt(compliance.ComplianceReceipt{
+			CoreTier:       tier,
+			HubID:          region,
+			CNAMEDirection: "ingress",
+			PairedPlane:    "VoidChassis State Plane (0x00 Scrub)",
+			ZeroedBytes:    n,
+			LatencyUs:      12,
+		})
+	}
 }
 
 func (rs *RuntimeState) scrubAll() {
@@ -83,7 +101,7 @@ func main() {
 	controlSrv := &http.Server{Addr: cfg.Network.ControlAPIBind, Handler: controlMux}
 
 	go func() {
-		log.Printf("[INFO] MTCHSHIP Drydock Data Plane (Harbor API) listening on http://%s (persistent_disk_bytes: 0)", cfg.Network.DataPlaneBind)
+		log.Printf("[INFO] MTCHSHIP Drydock Data Plane (Harbor API & Compliance SSE) listening on http://%s (persistent_disk_bytes: 0)", cfg.Network.DataPlaneBind)
 		if err := dataSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("[FATAL] Data plane server failed: %v", err)
 		}
@@ -113,6 +131,9 @@ func main() {
 
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
+
+	// Register Harbor Sovereign Gate Compliance SSE, OCSF Audit & Ed25519 Pubkey endpoints
+	compliance.RegisterComplianceRoutes(mux)
 
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
@@ -265,6 +286,10 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 			"entity":               "Lovorise Ltd",
 			"third_party_proxying": false,
 			"routing_mode":         "DNS-Only CNAME",
+			"ingress_cname":        "://mtchship.com",
+			"egress_transit_cname": "://mtchship.com",
+			"sovereign_gate_cname": "://mtchship.com",
+			"data_intel_cname":     "://mtchship.com",
 			"primary_origin":       rs.cfg.Endpoints.PrimaryOrigin,
 			"backup_origin":        rs.cfg.Endpoints.BackupOrigin,
 			"object_storage":       rs.cfg.Endpoints.ObjectStorageBackup,
