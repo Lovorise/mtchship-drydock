@@ -1,4 +1,4 @@
-// MTCHSHIP Drydock: Air-Gapped Localhost Runtime (127.0.0.1)
+// MTCHSHIP Drydock: Air-Gapped Localhost Runtime (127.0.0.1) — PART 1 / 2
 // Entity: Lovorise Ltd (UK Company No. 15814939) · License: Apache-2.0
 package main
 
@@ -84,6 +84,25 @@ func (rs *RuntimeState) scrubAll() {
 	rs.zeroScrubPasses.Add(1)
 }
 
+func withLocalCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
@@ -103,8 +122,14 @@ func main() {
 	dataMux := buildDataPlaneMux(state)
 	controlMux := buildControlAPIMux(state)
 
-	dataSrv := &http.Server{Addr: cfg.Network.DataPlaneBind, Handler: dataMux}
-	controlSrv := &http.Server{Addr: cfg.Network.ControlAPIBind, Handler: controlMux}
+	dataSrv := &http.Server{
+		Addr:    cfg.Network.DataPlaneBind,
+		Handler: withLocalCORS(dataMux),
+	}
+	controlSrv := &http.Server{
+		Addr:    cfg.Network.ControlAPIBind,
+		Handler: withLocalCORS(controlMux),
+	}
 
 	go func() {
 		log.Printf("[INFO] MTCHSHIP Drydock Data Plane (Harbor API & Compliance SSE) listening on http://%s (persistent_disk_bytes: 0)", cfg.Network.DataPlaneBind)
@@ -115,6 +140,7 @@ func main() {
 
 	go func() {
 		log.Printf("[INFO] MTCHSHIP Drydock Control Plane UI, Add-ons & Audit API listening on http://%s", cfg.Network.ControlAPIBind)
+		log.Printf("[INFO] Compass Data Intelligence Sandbox available at http://%s/compass/index.html", cfg.Network.ControlAPIBind)
 		if err := controlSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("[FATAL] Control API server failed: %v", err)
 		}
@@ -134,7 +160,6 @@ func main() {
 	log.Printf("[INFO] Deterministic 0x00 RAM zeroing complete (passes: %d, bytes_zeroed: %d).",
 		state.zeroScrubPasses.Load(), state.zeroedBytesTotal.Load())
 }
-
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
@@ -177,7 +202,7 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 			_, _ = w.Write(copyBuf)
 
 		case http.MethodPost, http.MethodPut:
-			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+			body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 			if err != nil {
 				http.Error(w, "invalid payload", http.StatusBadRequest)
 				return
@@ -190,7 +215,11 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 			}
 			rs.edgeState[key] = body
 			rs.mu.Unlock()
-			writeJSON(w, http.StatusOK, map[string]any{"key": key, "stored_bytes": len(body), "storage": "volatile_ram"})
+			writeJSON(w, http.StatusOK, map[string]any{
+				"key":          key,
+				"stored_bytes": len(body),
+				"storage":      "volatile_ram",
+			})
 
 		case http.MethodDelete:
 			rs.mu.Lock()
@@ -201,7 +230,10 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 				delete(rs.edgeState, key)
 			}
 			rs.mu.Unlock()
-			writeJSON(w, http.StatusOK, map[string]any{"key": key, "scrubbed": "0x00"})
+			writeJSON(w, http.StatusOK, map[string]any{
+				"key":      key,
+				"scrubbed": "0x00",
+			})
 
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -211,13 +243,60 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux.HandleFunc("/live/stream", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 			return
 		}
-		_, _ = fmt.Fprintf(w, "data: {\"event\":\"connected\",\"plane\":\"data_plane\",\"zero_copy\":true}\n\n")
+
+		initPayload, _ := json.Marshal(map[string]any{
+			"emittedAtMs":  time.Now().UnixMilli(),
+			"direction":    "egress",
+			"channel":      "harbor-live-egress",
+			"symbol":       "SANDBOX-INIT",
+			"value":        0,
+			"delta":        0,
+			"bytes":        64,
+			"wipeVerified": true,
+			"label":        "Connected to Drydock Data Plane",
+		})
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", initPayload)
 		flusher.Flush()
+
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case t := <-ticker.C:
+				rs.mu.RLock()
+				tier := rs.activeTier
+				keysCount := len(rs.edgeState)
+				var totalRamBytes int
+				for _, b := range rs.edgeState {
+					totalRamBytes += len(b)
+				}
+				rs.mu.RUnlock()
+
+				ev := map[string]any{
+					"emittedAtMs":  t.UnixMilli(),
+					"direction":    "egress",
+					"channel":      "harbor-live-egress",
+					"symbol":       fmt.Sprintf("DDR5-%s-%s", strings.ToUpper(rs.cfg.Simulation.Region), strings.ToUpper(tier)),
+					"value":        totalRamBytes,
+					"delta":        keysCount,
+					"bytes":        128 + totalRamBytes,
+					"wipeVerified": true,
+					"label":        fmt.Sprintf("Keys: %d · Scrubbed: %d B", keysCount, rs.zeroedBytesTotal.Load()),
+				}
+				payload, _ := json.Marshal(ev)
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", payload)
+				flusher.Flush()
+			}
+		}
 	})
 
 	return mux
@@ -229,6 +308,9 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	compliance.RegisterComplianceRoutes(mux)
 	addons.RegisterAddonRoutes(mux)
 
+	compassFS := http.FileServer(http.Dir("./compass-ui/data-intelligence"))
+	mux.Handle("/compass/", http.StripPrefix("/compass/", compassFS))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -238,6 +320,20 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(dashboardHTML)
+	})
+
+	mux.HandleFunc("/api/v1/config", func(w http.ResponseWriter, r *http.Request) {
+		rs.mu.RLock()
+		tier := rs.activeTier
+		rs.mu.RUnlock()
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"data_plane_bind":  rs.cfg.Network.DataPlaneBind,
+			"control_api_bind": rs.cfg.Network.ControlAPIBind,
+			"active_tier":      tier,
+			"region":           rs.cfg.Simulation.Region,
+			"city":             rs.cfg.Simulation.City,
+		})
 	})
 
 	mux.HandleFunc("/api/v1/tier", func(w http.ResponseWriter, r *http.Request) {
@@ -283,37 +379,18 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	mux.HandleFunc("/api/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
 		rs.mu.RLock()
 		tier := rs.activeTier
+		keysCount := len(rs.edgeState)
 		rs.mu.RUnlock()
 
 		writeJSON(w, http.StatusOK, map[string]any{
 			"air_gapped":            rs.cfg.Runtime.AirGapped,
 			"persistent_disk_bytes": rs.cfg.Runtime.PersistentDiskBytes,
 			"active_tier":           tier,
+			"active_ram_keys":       keysCount,
 			"zero_scrub_passes":     rs.zeroScrubPasses.Load(),
 			"bytes_zeroed":          rs.zeroedBytesTotal.Load(),
 		})
 	})
 
-	mux.HandleFunc("/api/v1/promote", func(w http.ResponseWriter, r *http.Request) {
-		rs.mu.RLock()
-		tier := rs.activeTier
-		rs.mu.RUnlock()
-
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":                "ready",
-			"active_tier":           tier,
-			"region":                rs.cfg.Simulation.Region,
-			"city":                  rs.cfg.Simulation.City,
-			"persistent_disk_bytes": 0,
-		})
-	})
-
 	return mux
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }
