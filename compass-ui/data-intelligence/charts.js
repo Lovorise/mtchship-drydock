@@ -1,5 +1,5 @@
 /**
- * MTCHSHIP Compass: Data Intelligence UI — Universal 32+ Charts, Banking & Live Feed Engine (PART 1 / 2)
+ * MTCHSHIP Compass: Data Intelligence UI — Universal 36-Chart & 60-FPS Live Stream Engine (PART 1 / 2)
  * Path: compass-ui/data-intelligence/charts.js
  * 100% MTCHSHIP Compass UI — Zero third-party libraries, zero external dependencies.
  *
@@ -13,11 +13,7 @@ export const COMPASS_DEFAULT_PALETTE = Object.freeze([
   '#111111', '#3F3F46', '#71717A', '#A1A1AA', '#E4E4E7',
 ]);
 
-/**
- * Complete Catalog of 34 Built-in Compass Chart & Intelligence Types
- */
 export const COMPASS_CHART_CATALOG = Object.freeze([
-  // Core Comparison & Composition (1-8)
   { id: 'bar', category: 'Comparison', label: 'Vertical Bar Chart' },
   { id: 'horizontal-bar', category: 'Comparison', label: 'Horizontal Bar Chart' },
   { id: 'stacked-bar', category: 'Composition', label: 'Stacked Bar Chart' },
@@ -26,8 +22,6 @@ export const COMPASS_CHART_CATALOG = Object.freeze([
   { id: 'pie', category: 'Composition', label: 'Pie Breakdown' },
   { id: 'treemap', category: 'Hierarchy', label: 'Proportional Treemap' },
   { id: 'sunburst', category: 'Hierarchy', label: 'Radial Sunburst' },
-
-  // Time-Series, Forecasting & Live Telemetry (9-16)
   { id: 'line', category: 'Time-Series', label: 'Time-Series Line' },
   { id: 'multi-line', category: 'Time-Series', label: 'Multi-Series Line' },
   { id: 'area', category: 'Time-Series', label: 'Cumulative Area' },
@@ -36,8 +30,6 @@ export const COMPASS_CHART_CATALOG = Object.freeze([
   { id: 'forecast', category: 'Predictive', label: 'Confidence-Interval Forecast' },
   { id: 'sparkline', category: 'Telemetry', label: 'Inline KPI Sparkline' },
   { id: 'live-ticker', category: 'Live Feed', label: 'Sub-Second Live Ticker Tape' },
-
-  // Financial, Banking & Flow Intelligence (17-24)
   { id: 'waterfall', category: 'Financial', label: 'Waterfall Bridge (Net -> VAT -> Gross)' },
   { id: 'sankey', category: 'Flow', label: 'Sankey Ingress -> Egress Flow' },
   { id: 'candlestick', category: 'Markets', label: 'OHLC Financial Candlestick' },
@@ -46,8 +38,6 @@ export const COMPASS_CHART_CATALOG = Object.freeze([
   { id: 'funnel', category: 'Conversion', label: 'Pipeline Stage Funnel' },
   { id: 'pareto', category: 'Quality', label: 'Pareto 80/20 Cumulative Curve' },
   { id: 'bullet-rag', category: 'Performance', label: 'Bullet & RAG Target Tracker' },
-
-  // Statistical, Distribution & Operations (25-34)
   { id: 'scatter', category: 'Statistical', label: 'Scatter Correlation Plot' },
   { id: 'bubble', category: 'Statistical', label: '3D-Metric Bubble Plot' },
   { id: 'boxplot', category: 'Statistical', label: 'Quartile Box & Whisker Plot' },
@@ -62,9 +52,6 @@ export const COMPASS_CHART_CATALOG = Object.freeze([
   { id: 'live-feed', category: 'Live Feed', label: 'Harbor Live Egress Event Stream' },
 ]);
 
-/**
- * Universal Business Data & Theme Adapter (100% Compass UI)
- */
 export function createUniversalWidget(config = {}) {
   const tokens = config.tokens || {};
   const customPalette = tokens.customPalettes?.custom;
@@ -103,35 +90,138 @@ export function createUniversalWidget(config = {}) {
   };
 }
 
-/**
- * Live Ticker & Harbor Live Data Intelligence Stream Controller (Zero-Disk RAM Ring Buffer)
- */
 export function createLiveFeedController(options = {}) {
-  const maxEvents = options.maxEvents ?? 60;
+  const maxEvents = options.maxEvents ?? 80;
   const listeners = new Set();
   const buffer = [];
+  const latencySamples = [];
   let timer = null;
+  let es = null;
+  let abortCtrl = null;
+  let rafScheduled = false;
   let seq = 0;
+
+  const counters = {
+    totalEvents: 0,
+    eventsPerSec: 0,
+    throughputBytesPerSec: 0,
+    liveVisitors: 0,
+    adImpressions: 0,
+    adClicks: 0,
+    wipeReceiptsVerified: 0,
+    p50LatencyMs: 0,
+    p99LatencyMs: 0,
+    _winEvents: 0,
+    _winBytes: 0,
+    _winStart: performance.now(),
+  };
+
+  function calcPercentile(arr, p) {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+    return Math.round(sorted[idx] * 100) / 100;
+  }
+
+  function notifyFrame() {
+    if (rafScheduled) return;
+    rafScheduled = true;
+    const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
+    raf(() => {
+      rafScheduled = false;
+      const snap = [...buffer];
+      const stats = getStats();
+      for (const fn of listeners) fn(snap.at(0) || null, snap, stats);
+    });
+  }
 
   function push(event) {
     seq += 1;
+    const nowPerf = performance.now();
+    const nowEpoch = Date.now();
+    const bytes = Number(event?.bytes ?? 0);
+
+    counters.totalEvents += 1;
+    counters._winEvents += 1;
+    counters._winBytes += bytes;
+
+    const elapsed = nowPerf - counters._winStart;
+    if (elapsed >= 1000) {
+      counters.eventsPerSec = Math.round((counters._winEvents * 1000) / elapsed);
+      counters.throughputBytesPerSec = Math.round((counters._winBytes * 1000) / elapsed);
+      counters._winEvents = 0;
+      counters._winBytes = 0;
+      counters._winStart = nowPerf;
+    }
+
+    if (event?.emittedAtMs) {
+      const lat = Math.max(0.01, nowEpoch - Number(event.emittedAtMs));
+      latencySamples.push(lat);
+      if (latencySamples.length > 200) latencySamples.shift();
+      counters.p50LatencyMs = calcPercentile(latencySamples, 50);
+      counters.p99LatencyMs = calcPercentile(latencySamples, 99);
+    }
+
+    if (typeof event?.liveVisitors === 'number') counters.liveVisitors = event.liveVisitors;
+    else if (event?.visitorDelta) counters.liveVisitors = Math.max(0, counters.liveVisitors + Number(event.visitorDelta));
+    if (event?.impressions) counters.adImpressions += Number(event.impressions);
+    if (event?.clicks) counters.adClicks += Number(event.clicks);
+    if (event?.wipeVerified !== false) counters.wipeReceiptsVerified += 1;
+
     const item = {
       seq,
-      timestamp: event?.timestamp || new Date().toISOString(),
+      timestamp: event?.timestamp || new Date(nowEpoch).toISOString(),
       direction: event?.direction || 'egress',
       channel: event?.channel || 'harbor-live-egress',
       symbol: event?.symbol || event?.key || `STREAM-${seq}`,
       value: Number(event?.value ?? event?.amount ?? 0),
       delta: Number(event?.delta ?? 0),
       currency: event?.currency || options.currency || 'GBP',
-      bytes: Number(event?.bytes ?? 0),
+      bytes,
       wipeVerified: event?.wipeVerified !== false,
       label: event?.label || event?.description || '',
     };
+
     buffer.unshift(item);
     if (buffer.length > maxEvents) buffer.length = maxEvents;
-    for (const fn of listeners) fn(item, buffer);
+    notifyFrame();
     return item;
+  }
+
+  function connectLiveEndpoint(url, mode = 'sse') {
+    stop();
+    if (!url) return;
+    if (mode === 'sse' && typeof EventSource !== 'undefined') {
+      es = new EventSource(url);
+      es.onmessage = (msg) => {
+        try {
+          const parsed = JSON.parse(msg.data);
+          if (Array.isArray(parsed)) parsed.forEach(push);
+          else push(parsed);
+        } catch {}
+      };
+      return;
+    }
+    abortCtrl = new AbortController();
+    fetch(url, { signal: abortCtrl.signal })
+      .then(async (res) => {
+        const reader = res.body?.getReader();
+        if (!reader) return;
+        const decoder = new TextDecoder();
+        let carry = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          carry += decoder.decode(value, { stream: true });
+          const lines = carry.split('\n');
+          carry = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try { push(JSON.parse(line)); } catch {}
+          }
+        }
+      })
+      .catch(() => {});
   }
 
   function subscribe(fn) {
@@ -139,49 +229,16 @@ export function createLiveFeedController(options = {}) {
     return () => listeners.delete(fn);
   }
 
-  function startLocalSimulation(intervalMs = 1200) {
+  function startLocalSimulation(intervalMs = 60) {
     stop();
+    counters.liveVisitors = 48250;
     const hubs = ['London-Core', 'NA-East', 'APAC-Tokyo', 'ME-Dubai', 'SA-SaoPaulo', 'AF-Johannesburg'];
-    const channels = ['Sports-Live-1->N', 'FX-Orderbook', 'Grid-Telemetry', 'Bank-Clearing', 'Gaming-State'];
+    const workloads = ['Banking-Clearing', 'Live-Scores-1->N', 'AdTech-RTB', 'Social-Live-Guests', 'Exchange-Orderbook'];
     timer = setInterval(() => {
       const hub = hubs[seq % hubs.length];
-      const channel = channels[seq % channels.length];
-      const delta = Math.round((Math.random() - 0.45) * 420 * 100) / 100;
-      const base = Math.round((1250 + Math.random() * 8400) * 100) / 100;
-      push({
-        direction: 'egress',
-        channel,
-        symbol: `${hub} · ${channel}`,
-        value: base,
-        delta,
-        bytes: Math.floor(16384 + Math.random() * 49152),
-        wipeVerified: true,
-        label: `Blind forward flush (${hub}) -> 0x00 wiped`,
-      });
-    }, intervalMs);
-  }
-
-  function stop() {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
-  }
-
-  function clearAndZero() {
-    buffer.length = 0;
-    seq = 0;
-  }
-
-  return {
-    push,
-    subscribe,
-    startLocalSimulation,
-    stop,
-    clearAndZero,
-    getSnapshot: () => [...buffer],
-  };
-}
+      const workload = workloads[seq % workloads.length];
+      const delta = Math.round((Math.random() - 0.45) * 410 * 100) / 100;
+      const value = Math.round((3200 + Math.random() * 14500) * 100) / 100;
 function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
@@ -219,10 +276,10 @@ export function renderCompassChart(container, config = {}) {
       .map((ev) => {
         const d = Number(ev.delta ?? 0);
         const sign = d > 0 ? '+' : '';
-        return `<div class="compass-badge" style="white-space:nowrap;padding:6px 12px;">
+        return `<div class="badge" style="white-space:nowrap;padding:6px 12px;">
           <strong>${esc(ev.symbol || ev.label)}</strong>
-          <span class="compass-mono">${esc(fmtVal(ev.value, widget.currency, isCurrency))}</span>
-          <span class="compass-mono" style="color:${d >= 0 ? 'var(--status-ok)' : 'var(--status-danger)'};">${sign}${d.toFixed(2)}</span>
+          <span class="mono">${esc(fmtVal(ev.value, widget.currency, isCurrency))}</span>
+          <span class="mono" style="color:${d >= 0 ? 'var(--status-ok, #15803D)' : 'var(--status-danger, #B91C1C)'};">${sign}${d.toFixed(2)}</span>
         </div>`;
       })
       .join('')}</div>`;
@@ -231,20 +288,20 @@ export function renderCompassChart(container, config = {}) {
 
   if (type === 'live-feed') {
     const events = Array.isArray(config.events) ? config.events : [];
-    container.innerHTML = `<div style="max-height:260px;overflow-y:auto;border:var(--bd);border-radius:var(--r-sm);">
-      <table style="width:100%;border-collapse:collapse;font-size:var(--text-xs);">
-        <thead><tr style="background:var(--bg-subtle);text-align:left;border-bottom:var(--bd);">
+    container.innerHTML = `<div style="max-height:260px;overflow-y:auto;border:1px solid var(--bd-color, #E5E7EB);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--bg-subtle, #F3F4F6);text-align:left;border-bottom:1px solid var(--bd-color, #E5E7EB);">
           <th style="padding:8px;">Time</th><th style="padding:8px;">Flow</th><th style="padding:8px;">Stream</th>
           <th style="padding:8px;text-align:right;">Value</th><th style="padding:8px;text-align:right;">RAM Wipe</th>
         </tr></thead>
         <tbody>${events
           .map(
-            (ev) => `<tr style="border-bottom:var(--bd);">
-            <td class="compass-mono" style="padding:6px 8px;">${esc(String(ev.timestamp || '').slice(11, 19))}</td>
-            <td style="padding:6px 8px;"><span class="compass-badge">${esc(String(ev.direction || 'egress').toUpperCase())}</span></td>
+            (ev) => `<tr style="border-bottom:1px solid var(--bd-color, #E5E7EB);">
+            <td class="mono" style="padding:6px 8px;">${esc(String(ev.timestamp || '').slice(11, 19))}</td>
+            <td style="padding:6px 8px;"><span class="badge">${esc(String(ev.direction || 'egress').toUpperCase())}</span></td>
             <td style="padding:6px 8px;">${esc(ev.symbol || ev.label)}</td>
-            <td class="compass-mono" style="padding:6px 8px;text-align:right;">${esc(fmtVal(ev.value, ev.currency || widget.currency, isCurrency))}</td>
-            <td class="compass-mono" style="padding:6px 8px;text-align:right;">${ev.wipeVerified !== false ? '0x00 OK' : 'PENDING'}</td>
+            <td class="mono" style="padding:6px 8px;text-align:right;">${esc(fmtVal(ev.value, ev.currency || widget.currency, isCurrency))}</td>
+            <td class="mono" style="padding:6px 8px;text-align:right;">${ev.wipeVerified !== false ? '0x00 OK' : 'PENDING'}</td>
           </tr>`
           )
           .join('')}</tbody>
@@ -255,9 +312,9 @@ export function renderCompassChart(container, config = {}) {
 
   if (type === 'bank-ledger' || type === 'pivot-table') {
     const rows = Array.isArray(config.transactions) && config.transactions.length ? config.transactions : items;
-    container.innerHTML = `<div style="overflow-x:auto;border:var(--bd);border-radius:var(--r-sm);">
-      <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">
-        <thead><tr style="background:var(--bg-subtle);text-align:left;border-bottom:var(--bd);">
+    container.innerHTML = `<div style="overflow-x:auto;border:1px solid var(--bd-color, #E5E7EB);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:var(--bg-subtle, #F3F4F6);text-align:left;border-bottom:1px solid var(--bd-color, #E5E7EB);">
           <th style="padding:10px;">Reference / Description</th>
           <th style="padding:10px;">Direction</th>
           <th style="padding:10px;text-align:right;">Amount</th>
@@ -267,11 +324,11 @@ export function renderCompassChart(container, config = {}) {
           .map((r, i) => {
             const val = Number(r.amount ?? r.value ?? 0);
             const dir = r.direction || (val >= 0 ? 'ingress' : 'egress');
-            return `<tr style="border-bottom:var(--bd);">
+            return `<tr style="border-bottom:1px solid var(--bd-color, #E5E7EB);">
               <td style="padding:8px 10px;">${esc(r.description || r.label || `Entry ${i + 1}`)}</td>
-              <td style="padding:8px 10px;"><span class="compass-badge">${esc(dir.toUpperCase())}</span></td>
-              <td class="compass-mono" style="padding:8px 10px;text-align:right;color:${dir === 'ingress' ? 'var(--status-ok)' : 'var(--ink-primary)'};">${esc(fmtVal(val, r.currency || widget.currency, isCurrency))}</td>
-              <td class="compass-mono" style="padding:8px 10px;text-align:right;">${r.sharePercent ?? (widget.total ? roundShare((Math.abs(val) / widget.total) * 100) : 0)}%</td>
+              <td style="padding:8px 10px;"><span class="badge">${esc(dir.toUpperCase())}</span></td>
+              <td class="mono" style="padding:8px 10px;text-align:right;color:${dir === 'ingress' ? 'var(--status-ok, #15803D)' : 'var(--ink-primary, #111111)'};">${esc(fmtVal(val, r.currency || widget.currency, isCurrency))}</td>
+              <td class="mono" style="padding:8px 10px;text-align:right;">${r.sharePercent ?? (widget.total ? roundShare((Math.abs(val) / widget.total) * 100) : 0)}%</td>
             </tr>`;
           })
           .join('')}</tbody>
@@ -282,26 +339,26 @@ export function renderCompassChart(container, config = {}) {
 
   if (type === 'geo-6hub') {
     const hubs = [
-      { name: 'Europe (London Core)', x: 305, y: 74, load: '99.999%' },
-      { name: 'North America', x: 155, y: 88, load: 'Active' },
-      { name: 'South America', x: 215, y: 185, load: 'Active' },
-      { name: 'Middle East', x: 382, y: 112, load: 'Active' },
-      { name: 'Africa', x: 335, y: 165, load: 'Active' },
-      { name: 'APAC', x: 515, y: 118, load: 'Active' },
+      { name: 'Europe (London Core)', x: 305, y: 74 },
+      { name: 'North America', x: 155, y: 88 },
+      { name: 'South America', x: 215, y: 185 },
+      { name: 'Middle East', x: 382, y: 112 },
+      { name: 'Africa', x: 335, y: 165 },
+      { name: 'APAC', x: 515, y: 118 },
     ];
     const links = hubs
       .slice(1)
-      .map((h) => `<line x1="305" y1="74" x2="${h.x}" y2="${h.y}" stroke="var(--ink-muted)" stroke-dasharray="4 3" stroke-width="1.5"/>`)
+      .map((h) => `<line x1="305" y1="74" x2="${h.x}" y2="${h.y}" stroke="var(--ink-muted, #6B7280)" stroke-dasharray="4 3" stroke-width="1.5"/>`)
       .join('');
     const nodes = hubs
       .map(
         (h, idx) => `<g>
-        <circle cx="${h.x}" cy="${h.y}" r="${idx === 0 ? 8 : 6}" fill="var(--ink-primary)"/>
-        <text x="${h.x}" y="${h.y - 11}" text-anchor="middle" font-size="10" fill="var(--ink-primary)" font-family="var(--font-mono)">${esc(h.name)}</text>
+        <circle cx="${h.x}" cy="${h.y}" r="${idx === 0 ? 8 : 6}" fill="var(--ink-primary, #111111)"/>
+        <text x="${h.x}" y="${h.y - 11}" text-anchor="middle" font-size="10" fill="var(--ink-primary, #111111)" font-family="ui-monospace, monospace">${esc(h.name)}</text>
       </g>`
       )
       .join('');
-    container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;background:var(--bg-subtle);border-radius:var(--r-sm);">
+    container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;background:var(--bg-subtle, #F3F4F6);border-radius:8px;">
       ${links}${nodes}
     </svg>`;
     return widget;
@@ -313,9 +370,9 @@ export function renderCompassChart(container, config = {}) {
       ${cohorts
         .map((c) => {
           const pct = Math.max(10, Math.min(100, Number(c.value) || 0));
-          return `<div style="padding:14px 8px;text-align:center;border:var(--bd);border-radius:var(--r-sm);background:rgba(17,17,17,${(pct / 100) * 0.85});color:${pct > 50 ? '#FFFFFF' : 'var(--ink-primary)'};">
-            <div style="font-size:var(--text-xs);">${esc(c.label)}</div>
-            <div class="compass-mono" style="font-weight:700;">${pct}%</div>
+          return `<div style="padding:14px 8px;text-align:center;border:1px solid var(--bd-color, #E5E7EB);border-radius:8px;background:rgba(17,17,17,${(pct / 100) * 0.85});color:${pct > 50 ? '#FFFFFF' : 'var(--ink-primary, #111111)'};">
+            <div style="font-size:12px;">${esc(c.label)}</div>
+            <div class="mono" style="font-weight:700;">${pct}%</div>
           </div>`;
         })
         .join('')}
@@ -332,11 +389,11 @@ export function renderCompassChart(container, config = {}) {
           const offset = type === 'gantt' ? (idx * 14) % 50 : type === 'funnel' ? Math.round((100 - pct) / 2) : 0;
           const width = type === 'gantt' ? Math.max(20, 100 - offset) : pct;
           return `<div>
-            <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);margin-bottom:3px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
               <span>${esc(it.label)}</span>
-              <span class="compass-mono">${esc(fmtVal(it.value, widget.currency, isCurrency))} (${it.sharePercent}%)</span>
+              <span class="mono">${esc(fmtVal(it.value, widget.currency, isCurrency))} (${it.sharePercent}%)</span>
             </div>
-            <div style="width:100%;height:16px;background:var(--bg-subtle);border-radius:var(--r-sm);overflow:hidden;position:relative;">
+            <div style="width:100%;height:16px;background:var(--bg-subtle, #F3F4F6);border-radius:6px;overflow:hidden;">
               <div style="margin-left:${offset}%;width:${width}%;height:100%;background:${esc(it.color)};"></div>
             </div>
           </div>`;
@@ -373,7 +430,7 @@ export function renderCompassChart(container, config = {}) {
             ? `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
             : `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${cx + hole * Math.cos(angle + sliceAngle)} ${cy + hole * Math.sin(angle + sliceAngle)} A ${hole} ${hole} 0 ${large} 0 ${cx + hole * Math.cos(angle)} ${cy + hole * Math.sin(angle)} Z`;
         angle += sliceAngle;
-        return `<path d="${path}" fill="${esc(it.color)}" stroke="var(--bg-surface)" stroke-width="1.5"/>`;
+        return `<path d="${path}" fill="${esc(it.color)}" stroke="var(--bg-surface, #FFFFFF)" stroke-width="1.5"/>`;
       })
       .join('');
 
@@ -381,14 +438,14 @@ export function renderCompassChart(container, config = {}) {
       .map(
         (it, idx) => `<g transform="translate(270, ${36 + idx * 24})">
         <rect width="12" height="12" rx="2" fill="${esc(it.color)}"/>
-        <text x="18" y="10" font-size="12" fill="var(--ink-primary)">${esc(it.label)} (${it.sharePercent}%)</text>
+        <text x="18" y="10" font-size="12" fill="var(--ink-primary, #111111)">${esc(it.label)} (${it.sharePercent}%)</text>
       </g>`
       )
       .join('');
 
     container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
       ${slices}${legend}
-      ${hole > 0 ? `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink-primary)" font-family="var(--font-mono)">${esc(fmtVal(widget.total, widget.currency, isCurrency))}</text>` : ''}
+      ${hole > 0 ? `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink-primary, #111111)" font-family="ui-monospace, monospace">${esc(fmtVal(widget.total, widget.currency, isCurrency))}</text>` : ''}
     </svg>`;
     return widget;
   }
@@ -410,15 +467,15 @@ export function renderCompassChart(container, config = {}) {
         const a = (idx / count) * Math.PI * 2 - Math.PI / 2;
         const x = cx + r * Math.cos(a);
         const y = cy + r * Math.sin(a);
-        return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--bd-color)"/>
-          <text x="${cx + (r + 14) * Math.cos(a)}" y="${cy + (r + 14) * Math.sin(a)}" text-anchor="middle" font-size="10" fill="var(--ink-secondary)">${esc(it.label)}</text>`;
+        return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--bd-color, #E5E7EB)"/>
+          <text x="${cx + (r + 14) * Math.cos(a)}" y="${cy + (r + 14) * Math.sin(a)}" text-anchor="middle" font-size="10" fill="var(--ink-secondary, #374151)">${esc(it.label)}</text>`;
       })
       .join('');
     container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bd-color)"/>
-      <circle cx="${cx}" cy="${cy}" r="${r * 0.5}" fill="none" stroke="var(--bd-color)"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bd-color, #E5E7EB)"/>
+      <circle cx="${cx}" cy="${cy}" r="${r * 0.5}" fill="none" stroke="var(--bd-color, #E5E7EB)"/>
       ${axes}
-      <polygon points="${pts}" fill="rgba(17,17,17,0.18)" stroke="var(--ink-primary)" stroke-width="2"/>
+      <polygon points="${pts}" fill="rgba(17,17,17,0.18)" stroke="var(--ink-primary, #111111)" stroke-width="2"/>
     </svg>`;
     return widget;
   }
@@ -449,7 +506,7 @@ export function renderCompassChart(container, config = {}) {
 
       if (type === 'candlestick' || type === 'ohlc-bar' || type === 'boxplot') {
         const yMid = yOf(val);
-        return `<line x1="${xCenter}" y1="${Math.max(pad.top, yMid - 24)}" x2="${xCenter}" y2="${Math.min(pad.top + innerH, yMid + 24)}" stroke="var(--ink-primary)" stroke-width="1.5"/>
+        return `<line x1="${xCenter}" y1="${Math.max(pad.top, yMid - 24)}" x2="${xCenter}" y2="${Math.min(pad.top + innerH, yMid + 24)}" stroke="var(--ink-primary, #111111)" stroke-width="1.5"/>
           <rect x="${xCenter - barW / 3}" y="${yMid - 10}" width="${(barW * 2) / 3}" height="20" fill="${esc(it.color)}"/>`;
       }
 
@@ -468,20 +525,20 @@ export function renderCompassChart(container, config = {}) {
     ? `${type.includes('area') || type === 'streamgraph' || type === 'forecast'
         ? `<polygon points="${pad.left + stepX / 2},${zeroY} ${polyPts} ${pad.left + (items.length - 1) * stepX + stepX / 2},${zeroY}" fill="rgba(17,17,17,0.12)"/>`
         : ''}
-      <polyline fill="none" stroke="var(--ink-primary)" stroke-width="2.5" points="${polyPts}"/>
+      <polyline fill="none" stroke="var(--ink-primary, #111111)" stroke-width="2.5" points="${polyPts}"/>
       ${items
-        .map((it, idx) => `<circle cx="${pad.left + idx * stepX + stepX / 2}" cy="${yOf(it.value)}" r="4" fill="var(--ink-primary)"/>`)
+        .map((it, idx) => `<circle cx="${pad.left + idx * stepX + stepX / 2}" cy="${yOf(it.value)}" r="4" fill="var(--ink-primary, #111111)"/>`)
         .join('')}`
     : '';
 
   const labels = items
     .map(
-      (it, idx) => `<text x="${pad.left + idx * stepX + stepX / 2}" y="${H - 14}" text-anchor="middle" font-size="10" fill="var(--ink-secondary)">${esc(it.label.slice(0, 14))}</text>`
+      (it, idx) => `<text x="${pad.left + idx * stepX + stepX / 2}" y="${H - 14}" text-anchor="middle" font-size="10" fill="var(--ink-secondary, #374151)">${esc(it.label.slice(0, 14))}</text>`
     )
     .join('');
 
   container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
-    <line x1="${pad.left}" y1="${zeroY}" x2="${W - pad.right}" y2="${zeroY}" stroke="var(--bd-color)"/>
+    <line x1="${pad.left}" y1="${zeroY}" x2="${W - pad.right}" y2="${zeroY}" stroke="var(--bd-color, #E5E7EB)"/>
     ${isLineFamily && type !== 'pareto' ? '' : shapes}
     ${lineLayer}
     ${labels}
