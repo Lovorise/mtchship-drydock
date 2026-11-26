@@ -104,13 +104,14 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args != "up" {
+	args := os.Args[1:]
+	if len(args) < 1 || args[0] != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
 	}
 
 	fs := flag.NewFlagSet("up", flag.ExitOnError)
 	configPath := fs.String("config", "drydock.example.yaml", "Path to Drydock YAML configuration")
-	_ = fs.Parse(os.Args[2:])
+	_ = fs.Parse(args[1:])
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
