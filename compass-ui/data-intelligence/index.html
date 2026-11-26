@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTCHSHIP / Data Intelligence</title>
+  <link rel="stylesheet" href="./theme-tokens.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg-canvas, #F9FAFB); color: var(--ink-primary, #111111); font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 244px; flex-shrink: 0; background: var(--bg-sidebar, #FFFFFF); border-right: 1px solid var(--bd-color, #E5E7EB); padding: 20px 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .wordmark { font-weight: 700; font-size: 15px; letter-spacing: 0.28em; color: var(--ink-primary, #111111); padding: 4px 6px 16px; text-transform: uppercase; }
+    .ws-box { border: 1px solid var(--bd-color, #E5E7EB); border-radius: 10px; padding: 10px 12px; margin-bottom: 18px; background: var(--bg-canvas, #F9FAFB); }
+    .ws-title { font-weight: 700; font-size: 11px; letter-spacing: 0.04em; }
+    .ws-sub { font-size: 11px; color: var(--ink-muted, #6B7280); }
+    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--ink-subtle, #9CA3AF); padding: 0 8px 8px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--ink-secondary, #374151); margin-bottom: 2px; }
+    .nav-item.active { background: var(--bg-subtle, #F3F4F6); color: var(--ink-primary, #111111); font-weight: 600; }
+    .nav-num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--ink-subtle, #9CA3AF); }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { height: 54px; background: var(--bg-surface, #FFFFFF); border-bottom: 1px solid var(--bd-color, #E5E7EB); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .content { max-width: 1320px; width: 100%; margin: 0 auto; padding: 28px; }
+    .kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--ink-muted, #6B7280); text-transform: uppercase; }
+    .hero-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 6px 0 24px; }
+    h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { margin: 4px 0 0; color: var(--ink-muted, #6B7280); font-size: 13px; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    select, button, input[type="file"] { font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--bd-color, #E5E7EB); background: var(--bg-surface, #FFFFFF); color: var(--ink-primary, #111111); cursor: pointer; }
+    button.btn-dark { background: #111111; color: #FFFFFF; border-color: #111111; font-weight: 600; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .card { background: var(--bg-surface, #FFFFFF); border: 1px solid var(--bd-color, #E5E7EB); border-radius: var(--r, 12px); padding: 18px 20px; }
+    .kpi-label { font-size: 12px; color: var(--ink-muted, #6B7280); }
+    .kpi-val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+    .kpi-sub { font-size: 11px; color: var(--ink-subtle, #9CA3AF); }
+    .grid-2 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .grid-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .card-title { font-size: 14px; font-weight: 600; margin: 0; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; border: 1px solid var(--bd-color, #E5E7EB); background: var(--bg-subtle, #F3F4F6); font-family: ui-monospace, monospace; font-size: 11px; color: var(--ink-secondary, #374151); }
+    .dark-banner { background: #111111; color: #FFFFFF; border-radius: 12px; padding: 22px 26px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+    .mono { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    @media (max-width: 1024px) { .sidebar { display: none; } .kpi-grid { grid-template-columns: repeat(2, 1fr); } .grid-2, .grid-equal { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div>
+        <div class="wordmark">MTCHSHIP</div>
+        <div class="ws-box">
+          <div class="ws-title">HARBOR INTELLIGENCE</div>
+          <div class="ws-sub">Local Evaluation · 127.0.0.1</div>
+        </div>
+        <div class="nav-label">WORKSPACE</div>
+        <div class="nav-item"><span class="nav-num">01</span> Network</div>
+        <div class="nav-item"><span class="nav-num">02</span> Compute</div>
+        <div class="nav-item"><span class="nav-num">03</span> Security</div>
+        <div class="nav-item"><span class="nav-num">04</span> AI Workers</div>
+        <div class="nav-item"><span class="nav-num">05</span> Live Engagement</div>
+        <div class="nav-item"><span class="nav-num">06</span> Application APIs</div>
+        <div class="nav-item active"><span class="nav-num">07</span> Data Intelligence</div>
+        <div class="nav-item"><span class="nav-num">08</span> Activity</div>
+        <div class="nav-item"><span class="nav-num">09</span> Billing</div>
+        <div class="nav-item"><span class="nav-num">10</span> Team</div>
+        <div class="nav-item"><span class="nav-num">11</span> Settings</div>
+      </div>
+      <div>
+        <div class="ws-box" style="margin-bottom:0;">
+          <div class="ws-title">LOVORISE LTD</div>
+          <div class="ws-sub">UK No. 15814939 · Apache-2.0</div>
+        </div>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:600;">Harbor Workspace</span>
+          <span style="color:var(--ink-subtle);">/</span>
+          <span style="color:var(--ink-muted);">Console / Data Intelligence</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="wipe-badge" class="badge">RAM: 0x00 READY · DISK: 0 B</span>
+          <button id="theme-toggle" type="button">Dark / Light</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="kicker">WORKSPACE / DATA INTELLIGENCE</div>
+        <div class="hero-row">
+          <div>
+            <h1>Data Intelligence at a Glance.</h1>
+            <p class="subtitle">Deterministic in-RAM parsing, blind forwarding telemetry, and zero-disk 0x00 verification.</p>
+          </div>
+          <div class="btn-row">
+            <select id="region-select" aria-label="Region">
+              <option value="UK">UK (GBP £)</option>
+              <option value="US">US (USD $)</option>
+              <option value="EU">EU (EUR €)</option>
+              <option value="CH">CH (CHF 0.05)</option>
+              <option value="JP">JP (JPY ¥)</option>
+              <option value="IN">IN (INR ₹)</option>
+            </select>
+            <input id="file-input" type="file" accept=".csv,.json,.pdf,.txt" />
+            <button id="live-toggle" class="btn-dark" type="button">+ Start Live Egress</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px 18px;margin-bottom:18px;">
+          <div class="kicker" style="margin-bottom:6px;">HARBOR LIVE EGRESS TICKER · 1 -&gt; N BLIND FORWARDING</div>
+          <div id="ticker-slot"></div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="card"><div class="kpi-label">Net / Ingress Base</div><div id="kpi-net" class="kpi-val mono">£6,410.25</div><div class="kpi-sub">Deterministic in-RAM</div></div>
+          <div class="card"><div class="kpi-label">Tax / VAT</div><div id="kpi-tax" class="kpi-val mono">£1,282.05</div><div class="kpi-sub">Auto-reconciled</div></div>
+          <div class="card"><div class="kpi-label">Gross / Total</div><div id="kpi-gross" class="kpi-val mono">£7,692.30</div><div class="kpi-sub">Cross-check verified</div></div>
+          <div class="card"><div class="kpi-label">Active Mesh Hubs</div><div class="kpi-val mono">6 / 6</div><div class="kpi-sub">London Core Active</div></div>
+          <div class="card"><div class="kpi-label">RAM Wipe &amp; Disk</div><div id="kpi-wipe" class="kpi-val mono">0 B / 0x00</div><div class="kpi-sub">persistent_disk_bytes: 0</div></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2 class="card-title">Universal Chart Explorer (36 Types)</h2>
+              <select id="chart-select" aria-label="Chart Type"></select>
+            </div>
+            <div id="primary-chart-slot"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2 class="card-title">Global 6-Hub Active-Active Mesh</h2>
+              <span class="badge">London Core Hub</span>
+            </div>
+            <div id="geo-chart-slot"></div>
+          </div>
+        </div>
+
+        <div class="grid-equal">
+          <div class="card">
+            <div class="card-head">
+              <h2 class="card-title">Bank Transactions &amp; Ingress/Egress Ledger</h2>
+              <span class="badge">LIVE INTELLIGENCE</span>
+            </div>
+            <div id="ledger-slot"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2 class="card-title">Harbor Live Egress Stream &amp; 0x00 Receipts</h2>
+              <span class="badge">DDR5 PURE-RAM</span>
+            </div>
+            <div id="feed-slot"></div>
+          </div>
+        </div>
+
+        <div class="dark-banner">
+          <div>
+            <div class="kicker" style="color:#9CA3AF;">ZERO-DISK FINOPS &amp; LIVE EGRESS</div>
+            <div style="font-size:18px;font-weight:700;margin-top:4px;">Built for blind forwarding. Zero persistent disk bytes.</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Local evaluation on 127.0.0.1 · Production-ready on MTCHSHIP Bare-Metal DDR5 RAM</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px;">
+            <div>
+              <div style="font-size:24px;font-weight:700;" class="mono">0x00</div>
+              <div style="font-size:11px;color:#9CA3AF;">Deterministic post-flush wipe</div>
+            </div>
+            <span class="badge" style="background:#FFFFFF;color:#111111;font-weight:600;">Compass UI v1.0</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createCompassSolver, CONTROL_PLANE_REGIONS } from './solver.js';
+    import { COMPASS_CHART_CATALOG, renderCompassChart, createLiveFeedController } from './charts.js';
+
+    const el = (id) => document.getElementById(id);
+    let region = 'UK';
+    let solver = createCompassSolver({ region });
+    let liveRunning = false;
+
+    const txRows = [
+      { description: 'Ingress · VoidChassis Edge Stream #01', direction: 'ingress', amount: 4200.00 },
+      { description: 'Ingress · Direct Enterprise Feed #02', direction: 'ingress', amount: 3150.50 },
+      { description: 'Egress · Harbor Live Intelligence Block', direction: 'egress', amount: 1850.00 },
+      { description: 'Egress · BYOS Data Warehouse Sync', direction: 'egress', amount: 940.25 },
+    ];
+
+    let netVal = 6410.25;
+    let taxVal = 1282.05;
+    let grossVal = 7692.30;
+
+    let seriesItems = [
+      { label: 'Net Base', value: netVal },
+      { label: 'Tax / VAT', value: taxVal },
+      { label: 'Gross Total', value: grossVal, meta: { type: 'total' } },
+    ];
+
+    const chartSelect = el('chart-select');
+    (COMPASS_CHART_CATALOG || []).forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.category}: ${c.label}`;
+      chartSelect.appendChild(opt);
+    });
+    chartSelect.value = 'waterfall';
+
+    const feed = createLiveFeedController?.({ currency: 'GBP' });
+    feed?.push({ direction: 'egress', symbol: 'London-Core · Live-1->N', value: 7692.30, delta: 142.50, wipeVerified: true });
+    feed?.push({ direction: 'ingress', symbol: 'VoidChassis · Edge-RX', value: 4200.00, delta: 85.00, wipeVerified: true });
+
+    function activeCurrency() {
+      return CONTROL_PLANE_REGIONS?.[region]?.defaultCurrency || 'GBP';
+    }
+
+    function renderAll() {
+      const cur = activeCurrency();
+      el('kpi-net').textContent = solver.formatCurrency?.(netVal, cur) || String(netVal);
+      el('kpi-tax').textContent = solver.formatCurrency?.(taxVal, cur) || String(taxVal);
+      el('kpi-gross').textContent = solver.formatCurrency?.(grossVal, cur) || String(grossVal);
+
+      renderCompassChart?.(el('primary-chart-slot'), { chartType: chartSelect.value, currency: cur, items: seriesItems, transactions: txRows, events: feed?.getSnapshot() || [] });
+      renderCompassChart?.(el('geo-chart-slot'), { chartType: 'geo-6hub', currency: cur, items: seriesItems });
+      renderCompassChart?.(el('ledger-slot'), { chartType: 'bank-ledger', currency: cur, transactions: txRows });
+      renderCompassChart?.(el('ticker-slot'), { chartType: 'live-ticker', currency: cur, events: feed?.getSnapshot() || [] });
+      renderCompassChart?.(el('feed-slot'), { chartType: 'live-feed', currency: cur, events: feed?.getSnapshot() || [] });
+    }
+
+    feed?.subscribe(() => {
+      const cur = activeCurrency();
+      const snap = feed.getSnapshot();
+      renderCompassChart?.(el('ticker-slot'), { chartType: 'live-ticker', currency: cur, events: snap });
+      renderCompassChart?.(el('feed-slot'), { chartType: 'live-feed', currency: cur, events: snap });
+    });
+
+    el('region-select').addEventListener('change', (e) => {
+      region = e.target.value;
+      solver = createCompassSolver({ region });
+      renderAll();
+    });
+
+    chartSelect.addEventListener('change', renderAll);
+
+    el('theme-toggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === 'dark' ? '' : 'dark';
+    });
+
+    el('live-toggle').addEventListener('click', (e) => {
+      liveRunning = !liveRunning;
+      if (liveRunning) {
+        feed?.startLocalSimulation?.(1100);
+        e.target.textContent = 'Stop Live Egress';
+      } else {
+        feed?.stop?.();
+        e.target.textContent = '+ Start Live Egress';
+      }
+    });
+
+    el('file-input').addEventListener('change', async (e) => {
+      const file = e.target.files?.item(0);
+      if (!file || !solver.solveInRAM) return;
+      const buf = new Uint8Array(await file.arrayBuffer());
+      const solved = solver.solveInRAM(buf, { format: file.name.split('.').pop() });
+      netVal = solved.net ?? 0;
+      taxVal = solved.tax ?? 0;
+      grossVal = solved.gross ?? 0;
+      seriesItems = [
+        { label: 'Net Base', value: netVal },
+        { label: 'Tax / VAT', value: taxVal },
+        { label: 'Gross Total', value: grossVal, meta: { type: 'total' } },
+      ];
+      const wipe = solved.memoryHygiene || {};
+      el('kpi-wipe').textContent = `${wipe.zeroedBytes || 0} B / 0x00`;
+      el('wipe-badge').textContent = `WIPED: ${wipe.zeroedBytes || 0} B (0x00) · DISK: 0 B`;
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
