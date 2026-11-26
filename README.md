@@ -2,24 +2,24 @@
 
 **Release:** v1.0.0 · **License:** Apache License 2.0 · **Maintainer:** Lovorise Ltd
 
-**MTCHSHIP Drydock** is the open-source, air-gapped local runtime (`Apache-2.0`) for **MTCHSHIP Edge**, maintained by **Lovorise Ltd** for **100% `localhost` (`127.0.0.1`)** testing of diskless Edge routing (with **Harbor API** included as a built-in feature), isolated execution planes, and deterministic `0x00` DDR5 RAM zeroing. It ships alongside the **Compass** cross-platform SDK & UI (**TypeScript**, **Swift**, **Kotlin**) for **BYOS (Bring Your Own Stack & Storage)** and **BYOD (Bring Your Own Data / Provider)** setups.
+**MTCHSHIP Drydock** (`://github.com`) is the open-source, air-gapped local runtime (`Apache-2.0`) for **MTCHSHIP Edge**, maintained by **Lovorise Ltd** for **100% `localhost` (`127.0.0.1`)** testing of diskless Edge routing (with **Harbor API** included as a built-in feature), isolated execution planes, and deterministic `0x00` DDR5 RAM zeroing. It ships alongside the **Compass** cross-platform SDK & UI (**TypeScript**, **Swift**, **Kotlin**) for **BYOS (Bring Your Own Stack & Storage)** and **BYOD (Bring Your Own Data / Provider)** setups.
 
-> **Portal & Early Access Status:** Active open-source development focuses on **MTCHSHIP Drydock** for `localhost` (`127.0.0.1`) testing. The `mtchship.com` web portal (UI Design & Control Plane) is currently under development. B2B teams interested in live bare-metal deployment can apply for our **30-day Early Access Pilot / Design Partner Program** (**48 hours to 14 calendar days** for initial **Active-Active Mesh** bare-metal setup depending on hardware availability and specifications, plus **16 days** of live evaluation testing; once the **Active-Active Mesh** is live, new Core Plan customer onboardings take **only minutes via `DNS-Only CNAME`**, while custom hardware add-ons provision in **48 hours to 14 calendar days** depending on availability and specifications) via **support@mtchship.com** (see **[docs/PLATFORM.md](./docs/PLATFORM.md)** and **[docs/ONBOARDING.md](./docs/ONBOARDING.md)**).
+> **Portal & Early Access Status:** Active open-source development focuses on **MTCHSHIP Drydock** (`://github.com`) for `localhost` (`127.0.0.1`) testing. The `mtchship.com` web portal (UI Design & Control Plane) is currently under development. B2B teams interested in live bare-metal deployment can apply for our **30-day Early Access Pilot / Design Partner Program** (**48 hours to 14 calendar days** for initial **Active-Active Mesh** bare-metal setup depending on hardware availability and specifications, plus **16 days** of live evaluation testing; once the **Active-Active Mesh** is live, new Core Plan customer onboardings take **only minutes via `DNS-Only CNAME`**, while custom hardware add-ons provision in **48 hours to 14 calendar days** depending on availability and specifications) via **support@mtchship.com** (see **[docs/PLATFORM.md](./docs/PLATFORM.md)** and **[docs/ONBOARDING.md](./docs/ONBOARDING.md)**).
 
 Copyright © 2026 Lovorise Ltd. All Rights Reserved.
 
-**Contents:** [1. Architecture](#1-architecture-match--ship) · [2. Localhost Quickstart](#2-localhost-quickstart-127001) · [3. Control & Audit Matrix](#3-local-control--audit-matrix-1270019090) · [4. Compass SDK & UI](#4-compass-sdk--compass-ui) · [5. Production Edge](./docs/PLATFORM.md) · [6. Repository & Legal](#6-repository-structure--legal)
+**Contents:** [1. Architecture](#1-architecture-match--ship) · [2. Localhost Quickstart](#2-localhost-quickstart-127001) · [3. Control & Audit Matrix](#3-local-control--audit-matrix-1270019090) · [4. Compass SDK & UI](#4-compass-sdk--compass-ui) · [5. Production Edge & Add-ons](#5-production-mtchship-edge--add-ons) · [6. Repository & Legal](#6-repository-structure--legal)
 
 ## 1. Architecture (`Match` + `Ship`)
 
-**MTCHSHIP Edge** works as a background docking hub with **Harbor API** included as a built-in feature. You keep your existing frontend CDN, cloud servers, databases, object storage (**BYOS**), and third-party data or sports feeds (**BYOD**), attaching MTCHSHIP Edge selectively via `DNS-Only CNAME` records without an intermediary proxy.
+**MTCHSHIP Edge** works as a background docking hub with **Harbor API** included as a built-in feature. You keep your existing frontend CDN, cloud servers, databases, object storage (**BYOS**), and third-party data or sports feeds (**BYOD**), attaching MTCHSHIP Edge selectively via dedicated Ingress and Egress `DNS-Only CNAME` records without an intermediary proxy or disk caching.
 
 **Drydock** replicates this bare-metal two-phase architecture locally on `127.0.0.1` in volatile memory:
 
 * **Match (`VoidChassis`: Ingress & Filtering):** Simulates bare-metal **SmartNIC hardware offload**, **eBPF / XDP driver-level packet filtering** (`XDP_DROP`), and health-checked DNS-Only failover (`< 50 ms`).
 * **Ship (`Execution Planes`: Isolated Diskless DDR5 RAM Transport):** Simulates a **PXE-booted read-only RAM OS image** (`persistent_disk_bytes: 0`, Linux swap disabled, `mlockall`-pinned off-heap buffers) with hybrid Post-Quantum TLS 1.3 (`X25519MLKEM768`), L7 WAF, and deterministic `0x00` buffer zeroing:
-  * **Plane Isolation:** **Data Plane** (with **Harbor API** included), **GPU Plane** (`GPU Forge Harbor`), **Stream Plane** (`Stream Harbor`), and **Reserve Plane** (`Sealed Hold`) run strictly isolated so high-egress streaming, GPU compute, and encrypted failover never contend for I/O or memory.
-  * **Primary/Backup Endpoints & 5-Second Dual-Failure Countdown:** Customers configure both a **Primary and Backup endpoint** for origin servers and **Object Storage**. Continuous streams and **MediaCargo** payloads (Docs, Images, full-resolution Video, 3D spatial Audio, real-time AR overlays, interactive 2D/3D avatars, and 3D/VFX rendering) transfer chunk-by-chunk to your active target endpoint with immediate post-flush `0x00` zeroing without interrupting open sessions. Processing runs on MTCHSHIP's bare-metal clean-room engine using **royalty-free open standards** (reducing payload size while preserving native resolution and audio fidelity, with zero cloud virtualization or third-party copyrighted software). If Primary fails, traffic switches immediately (`< 50 ms`) to Backup; the **5-second countdown** starts only when **both Primary and Backup endpoints** (origin or **Object Storage**) are unresponsive, offline, or overloaded, resulting in immediate `0x00` drop unless routed into **Sealed Hold**.
+  * **Plane Isolation:** **Data Plane** (with **Harbor API**, **Harbor Transit**, **Harbor Sovereign Gate**, and **Harbor Data Intelligence**), **GPU Plane** (`GPU Forge Harbor`), **Stream Plane** (`Stream Harbor`), and **Reserve Plane** (`Sealed Hold`) run strictly isolated so high-egress streaming, GPU compute, BI data pipelines, and encrypted failover never contend for I/O or memory.
+  * **Primary/Backup Endpoints & 5-Second Dual-Failure Countdown:** Customers configure both a **Primary and Backup endpoint** for origin servers and **Object Storage**. Continuous streams and **MediaCargo** payloads transfer chunk-by-chunk to your active target endpoint with immediate post-flush `0x00` zeroing without interrupting open sessions. If Primary fails, traffic switches immediately (`< 50 ms`) to Backup; the **5-second countdown** starts only when **both Primary and Backup endpoints** are unresponsive, offline, or overloaded, resulting in immediate `0x00` drop unless routed into **Sealed Hold**.
 
 **Localhost Guarantees (`127.0.0.1`):**
 * **100% Air-Gapped:** Zero outbound telemetry, zero external API calls, no account required.
@@ -37,12 +37,13 @@ go build -o drydock ./cmd/drydock
 ./scripts/smoke_test.sh
 ./drydock up --config drydock.example.yaml
 ```
-Local Drydock binds plaintext HTTP on `127.0.0.1:8443` for zero-config offline testing; production nodes enforce Hybrid Post-Quantum TLS 1.3 over HTTPS.
+
+Local Drydock binds plaintext HTTP on `127.0.0.1:8443` (Data Plane & Compliance SSE `compliance/compliance_sse.go` + `compliance/audit.go`) and `127.0.0.1:9090` (Control & Audit Matrix) for zero-config offline testing; production nodes enforce Hybrid Post-Quantum TLS 1.3 over HTTPS.
 
 ## 3. Local Control & Audit Matrix (`127.0.0.1:9090`)
 
 ```bash
-# Switch simulation tier (pro | business | enterprise)
+# Switch simulation tier (business | enterprise)
 curl -s -X POST http://127.0.0 \
   -H "Content-Type: application/json" \
   -d '{"tier":"enterprise"}'
@@ -50,13 +51,13 @@ curl -s -X POST http://127.0.0 \
 # Inspect latency quantiles, 0x00 zeroing counters & TCO benchmark
 curl -s http://127.0.0
 
-# Export pre-filled DNS-Only CNAME, Primary/Backup endpoints & SDK cutover manifest
-curl -s http://127.0.0
+# Stream live Ed25519 wipe receipts & OCSF audit verdicts (Data Plane)
+curl -N http://127.0.0
 ```
 
 ## 4. Compass SDK & Compass UI
 
-**Compass** provides bidirectional streaming clients (**gRPC**, **gRPC-Web**, **WebSocket**, **SSE**) and framework-agnostic headless UI primitives across **TypeScript** (web), **Swift** (iOS), and **Kotlin** (Android) for the built-in **Harbor API** suite and your own **BYOS / BYOD** backend, databases, object storage, and data or sports providers.
+**Compass** provides bidirectional streaming clients (**gRPC**, **gRPC-Web**, **WebSocket**, **SSE**) and framework-agnostic headless UI primitives across **TypeScript** (web), **Swift** (iOS), and **Kotlin** (Android) for the built-in **Harbor API** suite, **Compliance UI** (`sdk/compass-ui/compliance`), and your own **BYOS / BYOD** backend, databases, object storage, and data or sports providers.
 
 * **No Data Lock-In:** MTCHSHIP does not supply proprietary content or sports feeds. Compass inherits host application styles and runs free against your origin or `127.0.0.1` Drydock.
 * **Modular Components:** Individual **Compass UI** primitives and built-in **Harbor API** modules are documented per package inside `sdk/` and `docs/`.
@@ -72,33 +73,32 @@ const compass = new CompassClient({
 const stream = compass.subscribe('/live/stream');
 ```
 
-See `sdk/compass`, `sdk/compass-ui`, `sdk/compass-ios`, and `sdk/compass-android` for package documentation.
+See `sdk/compass`, `sdk/compass-ui`, `sdk/compass-ui/compliance`, `sdk/compass-ios`, and `sdk/compass-android` for package documentation.
 
-## 5. Production MTCHSHIP Edge & Standalone Add-ons
+## 5. Production MTCHSHIP Edge & Add-ons
 
 **MTCHSHIP Edge** runs your **BYOS / BYOD** endpoints on dedicated bare-metal & SmartNIC Transit Hubs across **6 global regions** (**Europe**, **Middle East**, **APAC**, **North America**, **South America**, **Africa**):
 
-* **Core Plans (`Pro`, `Business`, `Enterprise`):** Unmetered bandwidth & requests on our diskless **Active-Active Mesh**, with the full **Harbor API** suite included as a built-in feature across all Core Plans.
-* **Standalone Add-ons (`GPU Forge Harbor`, `Stream Harbor`, `Sealed Hold`):** Available on request with **no core subscription required** across isolated hardware planes.
+* **Ingress Core Plans (`Pro` `£/$250/mo`, `Business` `£/$1,000/mo`, `Enterprise` `£/$5,000/mo` — 1:1 UK/Global Parity, save 20% annually):** Unmetered **ingress** bandwidth & requests via dedicated Ingress `DNS-Only CNAME` on our diskless **Active-Active Mesh** (`persistent_disk_bytes: 0`, no disk caching), with the full **Harbor API** suite included as a built-in feature across all Core Plans (`Pro` includes 1 domain, `Business` 3 domains, `Enterprise` 10 domains; expandable via domain packs).
+* **Data Plane Engine Add-ons (Available with `Business` or `Enterprise` Core Plans via dedicated Egress/Pipeline `DNS-Only CNAME`, 1:1 UK/Global Parity):**
+  * **Harbor Transit (`£/$5,000/mo` or `£/$48,000/yr`, global flat across all 6 hubs, unmetered egress bandwidth):** Dedicated Egress `DNS-Only CNAME` for Zero-Disk `1 → N` Fan-out Blind-Forwarding Mesh (no disk caching; bridges traditional CDNs, Kafka, and Redis; includes up to 50 concurrent fan-out stream destinations globally with zero regional surcharges) with instant `0x00` DDR5 RAM wipe and signed **Ed25519 Wipe Receipts**.
+  * **Harbor Sovereign Gate (`£/$5,000/mo` or `£/$48,000/yr`):** Zero-Disk Compliance & Data-Isolation Engine (`persistent_disk_bytes: 0`) with SmartNIC `XDP_DRV` enforcement (`Surge Valve` & `Quantum Fuse`), in-RAM PII redaction & HMAC tokenization, `OCSF / OTLP` audit streams, and signed **Ed25519 Wipe Receipts**.
+  * **Harbor Data Intelligence (`£/$7,500/mo` or `£/$72,000/yr` + Open-Source Compass SDK & UI):** Zero-Disk FinOps & Compression Data Plane for BI, BA, Big Data, Data Warehouses & Data Lakes (sitting between data sources and **Snowflake**, **Databricks**, **Power BI**, **Tableau**, or **SAP**).
+* **Single-Tenant Standalone Plane Add-ons (No Core Subscription Required):**
+  * **`GPU Forge Harbor`**, **`Stream Harbor`** (`10 / 20 / 40 Gbps / Custom`), and **`Sealed Hold`** (`192 / 384 / 768 GB / Custom`, `AMD SEV-SNP` / `Intel TDX`, `ZK-PoR`) available on request across isolated hardware planes.
 
 See **[docs/PLATFORM.md](./docs/PLATFORM.md)** for plans, capacities, 30-day Early Access Pilot terms, and compliance.
 
 ## 6. Repository Structure & Legal
 
 ```text
-├── .well-known/security.txt   # RFC 9116 security contact
-├── cmd/drydock/               # Drydock CLI entrypoint
-├── docs/                      # Platform Plans (PLATFORM.md), Whitepaper, Onboarding & Order Form
-├── internal/                  # Config, Harbor gate, TCO Matrix & Promote API
-├── sdk/                       # compass (TypeScript), compass-ui, compass-ios, compass-android
-├── scripts/smoke_test.sh      # Air-gapped end-to-end verification script
-├── drydock.example.yaml       # Sample local Harbor configuration
-├── go.mod                     # Go module definition
-├── LICENSE                    # Apache License 2.0 (Drydock & Compass)
-├── NOTICE                     # Legal entity & IP attribution notice
-└── MSA.md | SLA.md | DPA.md | PRIVACY.md | AUP.md | SECURITY.md
-```
-
-* **License & Docs:** **Drydock** and **Compass** are licensed under [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE), [docs/PLATFORM.md](./docs/PLATFORM.md), [docs/WHITEPAPER.md](./docs/WHITEPAPER.md), [docs/ONBOARDING.md](./docs/ONBOARDING.md), and [docs/ORDER-FORM.md](./docs/ORDER-FORM.md).
-* **Commercial Services:** Provided by **Lovorise Ltd** (England & Wales, Company No. **15814939**, **27 Old Gloucester Street, London, WC1N 3AX, United Kingdom**) under [MSA.md](./MSA.md), [SLA.md](./SLA.md), [DPA.md](./DPA.md), [AUP.md](./AUP.md), and [PRIVACY.md](./PRIVACY.md).
-* **Early Access & Security:** Onboarding via **support@mtchship.com** · Private vulnerability reports via **security@mtchship.com** ([SECURITY.md](./SECURITY.md)).
+├── .well-known/security.txt          # RFC 9116 security contact
+├── cmd/drydock/                      # Drydock CLI entrypoint
+├── compliance/
+│   ├── compliance_sse.go             # Ed25519 Wipe Receipts SSE & public key endpoints
+│   └── audit.go                      # Volatile in-RAM OCSF/OTLP zero-payload audit ring buffer
+├── docs/                             # Platform Plans (PLATFORM.md), Whitepaper, Onboarding & Order Form
+├── internal/                         # Config, Harbor gate, TCO Matrix & Promote API
+├── sdk/                              # compass (TypeScript), compass-ui (incl. compliance), compass-ios, compass-android
+├── scripts/smoke_test.sh             # Air-gapped end-to-end verification script
+├── drydock.example.yaml              # Sample local Harbor configuration
