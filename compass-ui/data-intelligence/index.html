@@ -82,6 +82,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="wipe-badge" class="badge">60FPS · READY · DISK: 0 B</span>
+          <button id="receipts-btn" type="button">Export 0x00 Receipt</button>
           <button id="theme-toggle" type="button">Dark / Light</button>
         </div>
       </header>
@@ -99,16 +100,21 @@
               <option value="US">US (USD $)</option>
               <option value="EU">EU (EUR €)</option>
               <option value="CH">CH (CHF 0.05)</option>
+              <option value="CA">CA (CAD $)</option>
+              <option value="AU">AU (AUD $)</option>
+              <option value="SG">SG (SGD $)</option>
+              <option value="AE">AE (AED)</option>
               <option value="JP">JP (JPY ¥)</option>
               <option value="IN">IN (INR ₹)</option>
             </select>
-            <input id="endpoint-input" type="text" placeholder="https://.../v1/kpis/live (SSE)" style="width:210px;" />
+            <select id="profile-select" aria-label="Market Profile"></select>
+            <input id="endpoint-input" type="text" placeholder="http://127.0.0" style="width:210px;" />
             <button id="connect-btn" type="button">Connect</button>
+            <button id="ingest-btn" type="button">+ Test 1-&gt;N Ingest</button>
             <input id="file-input" type="file" accept=".csv,.json,.pdf,.txt" />
             <button id="live-toggle" class="btn-dark" type="button">+ Start 60FPS Live</button>
           </div>
         </div>
-
         <div class="card" style="padding:12px 18px;margin-bottom:18px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span class="kicker">HARBOR LIVE EGRESS TICKER · 1 -&gt; N INSTANT FORWARDING</span>
@@ -122,7 +128,7 @@
           <div class="card"><div class="kpi-label">Tax / VAT</div><div id="kpi-tax" class="kpi-val mono">£1,282.05</div><div class="kpi-sub">Auto-reconciled</div></div>
           <div class="card"><div class="kpi-label">Gross / Total</div><div id="kpi-gross" class="kpi-val mono">£7,692.30</div><div class="kpi-sub">Cross-check verified</div></div>
           <div class="card"><div class="kpi-label">Live Guests / Throughput</div><div id="kpi-live" class="kpi-val mono">48,250</div><div id="kpi-live-sub" class="kpi-sub">6 / 6 Global Hubs Active</div></div>
-          <div class="card"><div class="kpi-label">0x00 RAM Wipe &amp; Disk</div><div id="kpi-wipe" class="kpi-val mono">0 B / 0x00</div><div class="kpi-sub">persistent_disk_bytes: 0</div></div>
+          <div class="card"><div class="kpi-label">0x00 RAM Wipe &amp; Disk</div><div id="kpi-wipe" class="kpi-val mono">0 B / 0x00</div><div id="kpi-wipe-sub" class="kpi-sub">persistent_disk_bytes: 0</div></div>
         </div>
 
         <div class="grid-2">
@@ -183,8 +189,14 @@
 
     const el = (id) => document.getElementById(id);
     let region = 'UK';
+    let activeProfile = 'universal';
     let solver = createCompassSolver({ region });
     let liveRunning = false;
+
+    const controlPlaneUrl = window.location.origin.startsWith('http')
+      ? window.location.origin
+      : 'http://127.0.0.1:9090';
+    let dataPlaneUrl = 'http://127.0.0.1:8443';
 
     const txRows = [
       { description: 'Ingress · VoidChassis Edge Stream #01', direction: 'ingress', amount: 4200.00 },
@@ -203,6 +215,14 @@
       { label: 'Gross Total', value: grossVal, meta: { type: 'total' } },
     ];
 
+    const profileSelect = el('profile-select');
+    (solver.listProfiles?.() || []).forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.label;
+      profileSelect.appendChild(opt);
+    });
+
     const chartSelect = el('chart-select');
     (COMPASS_CHART_CATALOG || []).forEach((c) => {
       const opt = document.createElement('option');
@@ -215,7 +235,6 @@
     const feed = createLiveFeedController?.({ currency: 'GBP' });
     feed?.push({ direction: 'egress', symbol: 'London-Core · Live-1->N', value: 7692.30, delta: 142.50, emittedAtMs: Date.now() - 2, wipeVerified: true });
     feed?.push({ direction: 'ingress', symbol: 'VoidChassis · Edge-RX', value: 4200.00, delta: 85.00, emittedAtMs: Date.now() - 1, wipeVerified: true });
-
     function activeCurrency() {
       return CONTROL_PLANE_REGIONS?.[region]?.defaultCurrency || 'GBP';
     }
@@ -231,6 +250,32 @@
       renderCompassChart?.(el('ledger-slot'), { chartType: 'bank-ledger', currency: cur, transactions: txRows });
       renderCompassChart?.(el('ticker-slot'), { chartType: 'live-ticker', currency: cur, events: feed?.getSnapshot() || [] });
       renderCompassChart?.(el('feed-slot'), { chartType: 'live-feed', currency: cur, events: feed?.getSnapshot() || [] });
+    }
+
+    async function syncDrydockSandbox() {
+      try {
+        const cfgRes = await fetch(`${controlPlaneUrl}/api/v1/config`);
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          if (cfg.data_plane_bind) {
+            const host = cfg.data_plane_bind.startsWith(':') ? `127.0.0.1${cfg.data_plane_bind}` : cfg.data_plane_bind;
+            dataPlaneUrl = `http://${host}`;
+          }
+        }
+      } catch (_) {}
+      if (!el('endpoint-input').value.trim()) {
+        el('endpoint-input').value = `${dataPlaneUrl}/live/stream`;
+      }
+    }
+
+    async function pollDrydockMetrics() {
+      try {
+        const res = await fetch(`${controlPlaneUrl}/api/v1/metrics`);
+        if (!res.ok) return;
+        const m = await res.json();
+        el('kpi-wipe').textContent = `${m.bytes_zeroed ?? 0} B / 0x00`;
+        el('kpi-wipe-sub').textContent = `Passes: ${m.zero_scrub_passes ?? 0} · persistent_disk_bytes: 0`;
+      } catch (_) {}
     }
 
     feed?.subscribe((_latest, snap, stats) => {
@@ -251,99 +296,8 @@
       renderAll();
     });
 
-    chartSelect.addEventListener('change', renderAll);
-
-    el('theme-toggle').addEventListener('click', () => {
-      const root = document.documentElement;
-      root.dataset.theme = root.dataset.theme === 'dark' ? '' : 'dark';
-    });
-
-    el('connect-btn').addEventListener('click', () => {
-      const url = el('endpoint-input').value.trim();
-      if (!url) return;
-      liveRunning = true;
-      el('live-toggle').textContent = 'Stop Live Stream';
-      feed?.connectLiveEndpoint?.(url, 'sse');
-    });
-
-    el('live-toggle').addEventListener('click', (e) => {
-      liveRunning = !liveRunning;
-      if (liveRunning) {
-        feed?.startLocalSimulation?.(60);
-        e.target.textContent = 'Stop Live Stream';
-      } else {
-  <script type="module">
-    import { createCompassSolver, CONTROL_PLANE_REGIONS } from './solver.js';
-    import { COMPASS_CHART_CATALOG, renderCompassChart, createLiveFeedController } from './charts.js';
-
-    const el = (id) => document.getElementById(id);
-    let region = 'UK';
-    let solver = createCompassSolver({ region });
-    let liveRunning = false;
-
-    const txRows = [
-      { description: 'Ingress · VoidChassis Edge Stream #01', direction: 'ingress', amount: 4200.00 },
-      { description: 'Ingress · Direct Enterprise Feed #02', direction: 'ingress', amount: 3150.50 },
-      { description: 'Egress · Harbor Live Intelligence Block', direction: 'egress', amount: 1850.00 },
-      { description: 'Egress · BYOS Data Warehouse Sync', direction: 'egress', amount: 940.25 },
-    ];
-
-    let netVal = 6410.25;
-    let taxVal = 1282.05;
-    let grossVal = 7692.30;
-
-    let seriesItems = [
-      { label: 'Net Base', value: netVal },
-      { label: 'Tax / VAT', value: taxVal },
-      { label: 'Gross Total', value: grossVal, meta: { type: 'total' } },
-    ];
-
-    const chartSelect = el('chart-select');
-    (COMPASS_CHART_CATALOG || []).forEach((c) => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = `${c.category}: ${c.label}`;
-      chartSelect.appendChild(opt);
-    });
-    chartSelect.value = 'waterfall';
-
-    const feed = createLiveFeedController?.({ currency: 'GBP' });
-    feed?.push({ direction: 'egress', symbol: 'London-Core · Live-1->N', value: 7692.30, delta: 142.50, emittedAtMs: Date.now() - 2, wipeVerified: true });
-    feed?.push({ direction: 'ingress', symbol: 'VoidChassis · Edge-RX', value: 4200.00, delta: 85.00, emittedAtMs: Date.now() - 1, wipeVerified: true });
-
-    function activeCurrency() {
-      return CONTROL_PLANE_REGIONS?.[region]?.defaultCurrency || 'GBP';
-    }
-
-    function renderAll() {
-      const cur = activeCurrency();
-      el('kpi-net').textContent = solver.formatCurrency?.(netVal, cur) || String(netVal);
-      el('kpi-tax').textContent = solver.formatCurrency?.(taxVal, cur) || String(taxVal);
-      el('kpi-gross').textContent = solver.formatCurrency?.(grossVal, cur) || String(grossVal);
-
-      renderCompassChart?.(el('primary-chart-slot'), { chartType: chartSelect.value, currency: cur, items: seriesItems, transactions: txRows, events: feed?.getSnapshot() || [] });
-      renderCompassChart?.(el('geo-chart-slot'), { chartType: 'geo-6hub', currency: cur, items: seriesItems });
-      renderCompassChart?.(el('ledger-slot'), { chartType: 'bank-ledger', currency: cur, transactions: txRows });
-      renderCompassChart?.(el('ticker-slot'), { chartType: 'live-ticker', currency: cur, events: feed?.getSnapshot() || [] });
-      renderCompassChart?.(el('feed-slot'), { chartType: 'live-feed', currency: cur, events: feed?.getSnapshot() || [] });
-    }
-
-    feed?.subscribe((_latest, snap, stats) => {
-      const cur = activeCurrency();
-      renderCompassChart?.(el('ticker-slot'), { chartType: 'live-ticker', currency: cur, events: snap });
-      renderCompassChart?.(el('feed-slot'), { chartType: 'live-feed', currency: cur, events: snap });
-      if (stats) {
-        el('kpi-live').textContent = stats.liveVisitors.toLocaleString('en-GB');
-        el('kpi-live-sub').textContent = `AdTech CTR ${stats.adCtrPercent}% · ${stats.totalEvents.toLocaleString('en-GB')} events`;
-        el('telemetry-sub').textContent = `${stats.eventsPerSec} EVT/S · ${stats.throughputMbps} Mbps · p99 ${stats.p99LatencyMs}ms`;
-        el('wipe-badge').textContent = `60FPS · ${stats.eventsPerSec} EVT/S · p99 ${stats.p99LatencyMs}ms · 0x00 #${stats.wipeReceiptsVerified}`;
-      }
-    });
-
-    el('region-select').addEventListener('change', (e) => {
-      region = e.target.value;
-      solver = createCompassSolver({ region });
-      renderAll();
+    profileSelect.addEventListener('change', (e) => {
+      activeProfile = e.target.value;
     });
 
     chartSelect.addEventListener('change', renderAll);
@@ -354,11 +308,44 @@
     });
 
     el('connect-btn').addEventListener('click', () => {
-      const url = el('endpoint-input').value.trim();
-      if (!url) return;
+      const url = el('endpoint-input').value.trim() || `${dataPlaneUrl}/live/stream`;
       liveRunning = true;
       el('live-toggle').textContent = 'Stop Live Stream';
       feed?.connectLiveEndpoint?.(url, 'sse');
+    });
+
+    el('ingest-btn').addEventListener('click', async () => {
+      const cur = activeCurrency();
+      const amount = Math.round((850 + Math.random() * 4200) * 100) / 100;
+      const delta = Math.round((Math.random() - 0.3) * 180 * 100) / 100;
+      try {
+        await fetch(`${dataPlaneUrl}/api/v1/ingest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: `${region}-LIVE-1->N`,
+            value: amount,
+            delta,
+            currency: cur,
+            label: `Instant 1->N Egress (${activeProfile})`,
+          }),
+        });
+        await pollDrydockMetrics();
+      } catch (_) {}
+    });
+
+    el('receipts-btn').addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${controlPlaneUrl}/api/v1/receipts`);
+        if (!res.ok) return;
+        const payload = await res.json();
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `mtchship-0x00-wipe-receipts-${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      } catch (_) {}
     });
 
     el('live-toggle').addEventListener('click', (e) => {
@@ -375,8 +362,14 @@
     el('file-input').addEventListener('change', async (e) => {
       const file = e.target.files?.item(0);
       if (!file || !solver.solveInRAM) return;
+
       const buf = new Uint8Array(await file.arrayBuffer());
-      const solved = solver.solveInRAM(buf, { format: file.name.split('.').pop() });
+      const solved = await solver.solveInRAM(buf, {
+        format: file.name.split('.').pop(),
+        profile: activeProfile,
+        defaultDocId: file.name,
+      });
+
       netVal = solved.net ?? 0;
       taxVal = solved.tax ?? 0;
       grossVal = solved.gross ?? 0;
@@ -385,13 +378,44 @@
         { label: 'Tax / VAT', value: taxVal },
         { label: 'Gross Total', value: grossVal, meta: { type: 'total' } },
       ];
+
+      if (Array.isArray(solved.lineItems) && solved.lineItems.length > 0) {
+        txRows.length = 0;
+        solved.lineItems.slice(0, 20).forEach((item) => {
+          txRows.push({
+            description: item.description || `Row #${item.rowIndex}`,
+            direction: item.amount >= 0 ? 'ingress' : 'egress',
+            amount: Math.abs(item.amount),
+          });
+        });
+      }
+
+      try {
+        await fetch(`${dataPlaneUrl}/api/v1/state/${encodeURIComponent(file.name)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            docId: solved.docId,
+            sourceFormat: solved.sourceFormat,
+            currency: solved.currency,
+            net: netVal,
+            tax: taxVal,
+            gross: grossVal,
+          }),
+        });
+        await pollDrydockMetrics();
+      } catch (_) {}
+
       const wipe = solved.memoryHygiene || {};
       el('kpi-wipe').textContent = `${wipe.zeroedBytes || 0} B / 0x00`;
-      el('wipe-badge').textContent = `WIPED: ${wipe.zeroedBytes || 0} B (0x00) · DISK: 0 B`;
+      el('wipe-badge').textContent = `WIPED: ${wipe.zeroedBytes || 0} B (${solved.sourceFormat?.toUpperCase()}) · DISK: 0 B`;
       renderAll();
     });
 
     renderAll();
+    await syncDrydockSandbox();
+    await pollDrydockMetrics();
+    setInterval(pollDrydockMetrics, 2500);
   </script>
 </body>
 </html>
