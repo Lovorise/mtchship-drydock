@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"mtchship-drydock/addons"
 	"mtchship-drydock/compliance"
 	"mtchship-drydock/internal/config"
 )
@@ -115,7 +116,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("[INFO] MTCHSHIP Drydock Control Plane UI & Audit API listening on http://%s", cfg.Network.ControlAPIBind)
+		log.Printf("[INFO] MTCHSHIP Drydock Control Plane UI, Add-ons & Audit API listening on http://%s", cfg.Network.ControlAPIBind)
 		if err := controlSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("[FATAL] Control API server failed: %v", err)
 		}
@@ -135,11 +136,11 @@ func main() {
 	log.Printf("[INFO] Deterministic 0x00 RAM zeroing complete (passes: %d, bytes_zeroed: %d).",
 		state.zeroScrubPasses.Load(), state.zeroedBytesTotal.Load())
 }
-
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	compliance.RegisterComplianceRoutes(mux)
+	addons.RegisterAddonRoutes(mux)
 
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
@@ -226,6 +227,9 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
+	compliance.RegisterComplianceRoutes(mux)
+	addons.RegisterAddonRoutes(mux)
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -292,17 +296,16 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 	})
 
 	mux.HandleFunc("/api/v1/promote", func(w http.ResponseWriter, r *http.Request) {
+		rs.mu.RLock()
+		tier := rs.activeTier
+		rs.mu.RUnlock()
+
 		writeJSON(w, http.StatusOK, map[string]any{
-			"entity":               "Lovorise Ltd",
-			"third_party_proxying": false,
-			"routing_mode":         "DNS-Only CNAME",
-			"ingress_cname":        "://mtchship.com",
-			"egress_transit_cname": "://mtchship.com",
-			"sovereign_gate_cname": "://mtchship.com",
-			"data_intel_cname":     "://mtchship.com",
-			"primary_origin":       rs.cfg.Endpoints.PrimaryOrigin,
-			"backup_origin":        rs.cfg.Endpoints.BackupOrigin,
-			"object_storage":       rs.cfg.Endpoints.ObjectStorageBackup,
+			"status":                "ready",
+			"active_tier":           tier,
+			"region":                rs.cfg.Simulation.Region,
+			"city":                  rs.cfg.Simulation.City,
+			"persistent_disk_bytes": 0,
 		})
 	})
 
@@ -311,6 +314,7 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
