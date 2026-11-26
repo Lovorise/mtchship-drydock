@@ -56,7 +56,15 @@ func init() {
 	}
 }
 
+// PublishComplianceReceipt signs a Harbor Sovereign Gate event with Ed25519,
+// records it in the volatile in-RAM audit ring buffer, and broadcasts it via SSE.
 func PublishComplianceReceipt(evt ComplianceReceipt) {
+	if evt.AuditID == "" {
+		b := make([]byte, 4)
+		_, _ = rand.Read(b)
+		evt.AuditID = "aud_" + hex.EncodeToString(b)
+		clear(b)
+	}
 	if evt.TimestampUTC == "" {
 		evt.TimestampUTC = time.Now().UTC().Format(time.RFC3339Nano)
 	}
@@ -103,13 +111,15 @@ func signReceipt(evt *ComplianceReceipt) {
 		return
 	}
 	evt.PublicKeyHex = hex.EncodeToString(ephemeralPub)
-	canonical := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%d|%d",
+	canonical := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%d|%d",
 		evt.AuditID,
 		evt.TimestampUTC,
 		evt.CoreTier,
 		evt.Domain,
 		evt.PairedPlane,
 		evt.HubID,
+		evt.Framework,
+		evt.Verdict,
 		evt.ZeroedBytes,
 		evt.PersistentDiskBytes,
 	)
@@ -120,6 +130,7 @@ func signReceipt(evt *ComplianceReceipt) {
 	clear(sig)
 }
 
+// RegisterComplianceRoutes registers the Compass UI, SSE stream, OCSF audit export, and public key endpoints.
 func RegisterComplianceRoutes(mux *http.ServeMux) {
 	if subFS, err := fs.Sub(compassAssets, "."); err == nil {
 		fileServer := http.FileServer(http.FS(subFS))
@@ -135,6 +146,7 @@ func RegisterComplianceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/compliance/pubkey", HandleCompliancePublicKey)
 }
 
+// HandleComplianceReceiptsSSE streams live compliance, audit, and Ed25519 wipe receipts over SSE.
 func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
 	setCORSHeaders(w)
 	if r.Method == http.MethodOptions {
@@ -174,9 +186,19 @@ func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
 		clear(payload)
 	}
 
-	initial := newSimulatedReceipt()
-	recordAuditEvent(initial)
-	send(initial)
+	auditMu.RLock()
+	hasEvents := len(auditRing) > 0
+	var lastEvt ComplianceReceipt
+	if hasEvents {
+		lastEvt = auditRing[len(auditRing)-1]
+	}
+	auditMu.RUnlock()
+
+	if hasEvents {
+		send(lastEvt)
+	} else {
+		send(newSimulatedReceipt())
+	}
 
 	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
@@ -188,13 +210,17 @@ func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
 		case evt := <-ch:
 			send(evt)
 		case <-ticker.C:
-			sim := newSimulatedReceipt()
-			recordAuditEvent(sim)
-			send(sim)
+			auditMu.RLock()
+			empty := len(auditRing) == 0
+			auditMu.RUnlock()
+			if empty {
+				send(newSimulatedReceipt())
+			}
 		}
 	}
 }
 
+// HandleCompliancePublicKey returns the ephemeral Ed25519 public key for client-side verification.
 func HandleCompliancePublicKey(w http.ResponseWriter, r *http.Request) {
 	setCORSHeaders(w)
 	if r.Method == http.MethodOptions {
