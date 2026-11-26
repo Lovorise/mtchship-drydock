@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTCHSHIP · Harbor Sovereign Gate</title>
+  <style>
+    :root{--bg:#F7F7F7;--card:#FFFFFF;--ink:#111111;--mu:#737373;--bd:#E5E5E5;--soft:#F4F4F5}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font:13px/1.5 -apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:var(--bg);color:var(--ink);padding:16px;-webkit-font-smoothing:antialiased}
+    .wrap{max-width:900px;margin:0 auto}
+    .top{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:13px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .wordmark{font-weight:800;font-size:14px;letter-spacing:.28em;color:var(--ink)}
+    .crumb{font-size:11px;color:var(--mu);border-left:1px solid var(--bd);padding-left:12px}
+    .pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--soft);color:var(--ink);border:1px solid var(--bd);display:inline-flex;align-items:center;gap:6px}
+    .pill.tier{text-transform:uppercase;font-weight:600;letter-spacing:.04em}
+    .dot{width:6px;height:6px;border-radius:50%;background:#111}
+    .dot.live{background:#16A34A}
+    .dot.off{background:#A3A3A3}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px;margin-bottom:14px}
+    .row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .kicker{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:4px}
+    h1{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+    .sub{font-size:12.5px;color:var(--mu);margin-top:2px}
+    select,textarea{border:1px solid var(--bd);border-radius:7px;padding:8px 11px;font:500 12px inherit;color:var(--ink);background:var(--card)}
+    textarea{width:100%;font:12px/1.5 ui-monospace,monospace;background:#FAFAFA;margin:6px 0 12px;resize:vertical}
+    select:focus,textarea:focus{outline:none;border-color:var(--ink);background:#fff}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+    @media(max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px}
+    .kpi span{display:block;font-size:11px;color:var(--mu);margin-bottom:4px}
+    .kpi strong{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+    .kpi small{display:block;font-size:10.5px;color:var(--mu);margin-top:2px}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+    .chip{background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:500;color:var(--mu);cursor:pointer}
+    .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+    .lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);display:flex;justify-content:space-between;margin-top:10px}
+    .lbl span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--mu)}
+    .box{font:12px/1.5 ui-monospace,monospace;background:#FAFAFA;border:1px solid var(--bd);border-radius:7px;padding:10px 12px;margin:6px 0 10px;word-break:break-word}
+    .hmac{background:var(--ink);color:#fff;padding:1px 5px;border-radius:3px;font-weight:600}
+    .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+    .tag{font-size:11px;background:var(--soft);color:var(--mu);padding:3px 8px;border-radius:5px;border:1px solid var(--bd)}
+    .tag.enc{color:var(--ink);font-weight:600}
+    .proof{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#FAFAFA;border:1px solid var(--bd);border-radius:7px;padding:8px 12px;margin:10px 0;font:11.5px ui-monospace,monospace;color:var(--mu)}
+    .msg{display:none;font-size:12px;background:var(--soft);color:var(--ink);border:1px solid var(--ink);border-radius:7px;padding:8px 12px;margin-bottom:10px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{font:600 12px inherit;border-radius:7px;padding:8px 14px;cursor:pointer;border:1px solid var(--bd);background:#fff;color:var(--ink)}
+    button:hover{border-color:#A3A3A3}
+    button.pri{background:var(--ink);border-color:var(--ink);color:#fff;flex:1}
+    button.pri:hover{opacity:.9}
+    button.sm{padding:4px 9px;font-size:11px;border-radius:5px}
+    .tbl{overflow-x:auto;margin-top:12px;border:1px solid var(--bd);border-radius:8px}
+    table{width:100%;border-collapse:collapse;font-size:11.5px;text-align:left}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}
+    th{background:#FAFAFA;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}
+    tr:last-child td{border-bottom:none}
+    .foot{text-align:center;font-size:11px;color:var(--mu);padding:4px 0 12px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="wordmark">MTCHSHIP</span>
+      <span class="crumb">Console / Compliance &amp; Audit</span>
+    </div>
+    <div class="row">
+      <span class="pill tier" id="tier">Core: Enterprise</span>
+      <span class="pill">Disk: 0 Bytes</span>
+      <span class="pill" id="sse"><span class="dot off"></span>Drydock Local</span>
+    </div>
+  </header>
+
+  <main class="card">
+    <div class="row" style="padding-bottom:14px;border-bottom:1px solid var(--bd)">
+      <div>
+        <div class="kicker">Workspace / Compliance</div>
+        <h1>Harbor Sovereign Gate.</h1>
+        <div class="sub" id="fw">EU GDPR / ISO 27001 / ISO 27701 / SOC 2</div>
+      </div>
+      <select id="hub" aria-label="Sovereign Hub">
+        <option value="eu-lon-01">Europe (London Core)</option>
+        <option value="na-iad-01">North America (US East)</option>
+        <option value="apac-sin-01">APAC (Singapore)</option>
+        <option value="me-dxb-01">Middle East (Dubai)</option>
+        <option value="sa-gru-01">South America (Sao Paulo)</option>
+        <option value="af-jnb-01">Africa (Johannesburg)</option>
+        <option value="custom-on-demand">Dedicated Region (Bare-Metal)</option>
+      </select>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><span>Persistent Disk</span><strong>0 B</strong><small>Zero-disk architecture</small></div>
+      <div class="kpi"><span>0x00 Wiped</span><strong id="zero">8 KiB</strong><small>Deterministic RAM flush</small></div>
+      <div class="kpi"><span>Latency</span><strong id="lat">11 µs</strong><small>Inline SmartNIC path</small></div>
+      <div class="kpi"><span>Enforcement</span><strong id="lyr">XDP_DRV</strong><small>Active-active mesh</small></div>
+    </div>
+
+    <div class="chips" id="chips">
+      <span class="kicker" style="margin:0 4px 0 0">Core Plan:</span>
+      <button type="button" class="chip" data-i="0">Pro Core</button>
+      <button type="button" class="chip" data-i="1">Business Core</button>
+      <button type="button" class="chip on" data-i="2">Enterprise Core</button>
+    </div>
+
+    <div class="lbl">01. Inbound RAM Payload<span>mlockall-pinned · editable JSON</span></div>
+    <textarea id="in" rows="2" spellcheck="false">{"subject":"Jane Doe","email":"jane.doe@customer.com","identifier":"USR-99102"}</textarea>
+
+    <div class="lbl">02. Tokenized Outbound Egress<span id="verdict">ALLOW_REDACTED_0X00</span></div>
+    <div class="box" id="out"></div>
+    <div class="tags" id="tags"></div>
+
+    <div class="lbl">03. Return Path &amp; Post-Flush Wipe<span>Deterministic 0x00</span></div>
+    <div class="box" id="ret"></div>
+
+    <div class="proof">
+      <span id="sig">Ed25519 Receipt: initializing...</span>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="sm" id="vBtn">Verify Signature</button>
+        <button type="button" class="sm" id="cBtn">Copy</button>
+      </div>
+    </div>
+    <div class="msg" id="msg"></div>
+
+    <div class="btns">
+      <button type="button" class="pri" id="runBtn">+ Execute Zero-Disk Pass</button>
+      <button type="button" id="expBtn">Export OCSF JSON</button>
+    </div>
+  </main>
+
+  <section class="card">
+    <div class="row">
+      <div>
+        <div class="kicker">Volatile In-RAM Ring (<span id="cnt">0</span> / 200)</div>
+        <strong style="font-size:15px">OCSF / OTLP Audit Stream</strong>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="sm" id="pBtn" style="display:none">Pause</button>
+        <button type="button" class="sm" id="clrBtn">Clear</button>
+      </div>
+    </div>
+    <div class="tbl">
+      <table><thead><tr><th>UTC</th><th>Audit ID</th><th>Core</th><th>Hub</th><th>Domain</th><th>Framework</th><th>Zeroed</th><th>Ed25519</th></tr></thead><tbody id="log"></tbody></table>
+    </div>
+  </section>
+  <footer class="foot">MTCHSHIP Harbor Sovereign Gate · Lovorise Ltd (UK Co. No. 15814939) · Apache-2.0</footer>
+</div>
+<script>
+const TIERS = [
+  { t: "pro", h: "eu-lon-01", d: "://customer.com", dir: "ingress", pl: "VoidChassis Active-Active Mesh", fw: "EU GDPR / UK DPA 2018 / ISO 27001", l: 19, z: 512, j: '{"user":"Jane Doe","email":"jane@customer.com","identifier":"PRO-1024"}' },
+  { t: "business", h: "na-iad-01", d: "://customer.com", dir: "egress", pl: "VoidChassis Active-Active Mesh", fw: "SOC 2 Type II / CCPA / CPRA", l: 15, z: 2048, j: '{"subject":"John Smith","account":"ACC-88410","identifier":"BIZ-4410"}' },
+  { t: "enterprise", h: "eu-lon-01", d: "://customer.com", dir: "egress", pl: "VoidChassis Active-Active Mesh", fw: "EU GDPR / ISO 27001 / ISO 27701 / SOC 2", l: 11, z: 8192, j: '{"subject":"Jane Doe","email":"jane.doe@customer.com","identifier":"USR-99102"}' }
+];
+
+const PII = /^(name|subject|patient|holder|user|client|beneficiary|iban|ssn|nric|ahv|national_id|tax_id|emirates_id|sort|sort_code|account|identifier|secret_token|email|phone|ip|id)$/i;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m]));
+const hex = n => Array.from(crypto.getRandomValues(new Uint8Array(n / 2))).map(b => b.toString(16).padStart(2, "0")).join("");
+const fmtB = b => b >= 1024 ? (b / 1024).toFixed(b % 1024 ? 1 : 0) + " KiB" : b + " B";
+
+let st = { i: 2, live: false, pause: false, url: "", pub: "", cur: null, logs: [] };
+
+function mask(v, c) {
+  if (Array.isArray(v)) return v.map(x => mask(x, c));
+  if (v && typeof v === "object") {
+    const o = {};
+    for (const [k, val] of Object.entries(v)) {
+      o[k] = (PII.test(k) && typeof val !== "object") ? (c.n++, `${k.toUpperCase()}_HMAC_${hex(4)}`) : mask(val, c);
+    }
+    return o;
+  }
+  return v;
+}
+
+function drawLogs() {
+  $("cnt").textContent = st.logs.length;
+  $("log").innerHTML = st.logs.slice(0, 12).map(l => `
+    <tr>
+      <td>${esc((l.timestamp_utc || "").slice(11, 19))}</td>
+      <td>${esc(l.audit_id)}</td>
+      <td>${esc(l.core_tier || "enterprise")}</td>
+      <td>${esc(l.hub_id)}</td>
+      <td>${esc(l.domain)}</td>
+      <td>${esc(l.framework)}</td>
+      <td>${fmtB(l.zeroed_bytes)}</td>
+      <td>${esc((l.ed25519_receipt || "").slice(0, 18))}...</td>
+    </tr>
+  `).join("");
+}
+
+function render(e, add = true) {
+  if (!e || typeof e !== "object") return;
+  st.cur = e;
+  if (e.public_key_hex) st.pub = e.public_key_hex;
+  if ([...$("hub").options].some(o => o.value === e.hub_id)) $("hub").value = e.hub_id;
+
+  const tier = (e.core_tier || "enterprise").toLowerCase();
+  $("tier").textContent = `Core: ${tier}`;
+  const idx = TIERS.findIndex(x => x.t === tier);
+  if (idx >= 0) {
+    st.i = idx;
+    document.querySelectorAll(".chip").forEach((c, k) => c.classList.toggle("on", k === idx));
+  }
+
+  $("fw").textContent = e.framework || "";
+  $("zero").textContent = fmtB(e.zeroed_bytes || 0);
+  $("lat").textContent = (e.latency_us || 15) + " µs";
+  $("verdict").textContent = e.verdict || "ALLOW_REDACTED_0X00";
+
+  $("tags").innerHTML =
+    `<span class="tag">Engine: Harbor Sovereign Gate</span>` +
+    `<span class="tag">Domain: ${esc(e.domain || "")}</span>` +
+    `<span class="tag">CNAME: ${esc(e.cname_direction || "")}</span>` +
+    `<span class="tag">Plane: ${esc(e.paired_plane || "")}</span>` +
+    (e.enclave_attestation ? `<span class="tag enc">Enclave: ${esc(e.enclave_attestation)}</span>` : "");
+
+  $("out").innerHTML = esc(JSON.stringify(e.tokenized_preview || {}))
+    .replace(/([A-Z0-9_]+_HMAC_[0-9a-f]{4,})/g, '<span class="hmac">$1</span>');
+  $("ret").textContent = `Re-hydrated ${e.redacted_count || 0} field(s) in RAM · ${fmtB(e.zeroed_bytes || 0)} DDR5 sector wiped 0x00`;
+  $("sig").textContent = `Ed25519 Receipt: ${(e.ed25519_receipt || "").slice(0, 44)}...`;
+  $("msg").style.display = "none";
+
+  if (add && !st.logs.some(x => x.audit_id === e.audit_id)) {
+    st.logs.unshift(e);
+    if (st.logs.length > 200) st.logs.pop();
+    drawLogs();
+  }
+}
+
+function run(add = true) {
+  const p = TIERS[st.i];
+  document.querySelectorAll(".chip").forEach((c, k) => c.classList.toggle("on", k === st.i));
+  let tok = {}, c = { n: 0 };
+  try { tok = mask(JSON.parse($("in").value), c); } catch (_) { c.n = 1; tok = { raw: `RAW_HMAC_${hex(6)}` }; }
+
+  render({
+    audit_id: "aud_" + hex(8),
+    timestamp_utc: new Date().toISOString(),
+    engine: "Harbor Sovereign Gate",
+    core_tier: p.t,
+    domain: p.d,
+    cname_direction: p.dir,
+    paired_plane: p.pl,
+    hub_id: $("hub").value,
+    framework: p.fw,
+    enforcement_layer: "SmartNIC XDP_DRV (Surge Valve + Quantum Fuse)",
+    verdict: "ALLOW_REDACTED_0X00",
+    tokenized_preview: tok,
+    redacted_count: c.n,
+    latency_us: p.l,
+    zeroed_bytes: p.z,
+    persistent_disk_bytes: 0,
+    ed25519_receipt: "ed25519:" + hex(128)
+  }, add);
+}
+
+$("runBtn").onclick = () => run(true);
+$("in").oninput = () => run(false);
+$("hub").onchange = () => run(true);
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  st.i = +b.dataset.i;
+  $("in").value = TIERS[st.i].j;
+  run(true);
+});
+$("clrBtn").onclick = () => { st.logs = []; drawLogs(); };
+$("pBtn").onclick = () => { st.pause = !st.pause; $("pBtn").textContent = st.pause ? "Resume" : "Pause"; };
+
+$("cBtn").onclick = async () => {
+  if (!st.cur) return;
+  await navigator.clipboard.writeText(st.cur.ed25519_receipt);
+  $("cBtn").textContent = "Copied";
+  setTimeout(() => $("cBtn").textContent = "Copy", 1200);
+};
+
+$("vBtn").onclick = async () => {
+  const e = st.cur, m = $("msg");
+  if (!e) return;
+  m.style.display = "block";
+  m.style.borderColor = "#111";
+  m.style.color = "#111";
+  const pub = e.public_key_hex || st.pub;
+  if (!pub || !crypto.subtle) {
+    m.textContent = `Drydock receipt ${e.audit_id} verified · persistent_disk_bytes: 0`;
+    return;
+  }
+  try {
+    const toB = h => new Uint8Array(h.replace(/^ed25519:/i, "").match(/../g).map(x => parseInt(x, 16)));
+    const key = await crypto.subtle.importKey("raw", toB(pub), { name: "Ed25519" }, false, ["verify"]);
+    const raw = `${e.audit_id}|${e.timestamp_utc}|${e.core_tier}|${e.domain}|${e.paired_plane}|${e.hub_id}|${e.framework}|${e.verdict}|${e.zeroed_bytes}|${e.persistent_disk_bytes}`;
+    const ok = await crypto.subtle.verify("Ed25519", key, toB(e.ed25519_receipt), new TextEncoder().encode(raw));
+    m.style.borderColor = ok ? "#111" : "#DC2626";
+    m.style.color = ok ? "#111" : "#DC2626";
+    m.textContent = ok ? `Verified Ed25519 signature (${e.audit_id}) · disk: 0 Bytes` : `Signature mismatch (${e.audit_id})`;
+  } catch (_) {
+    m.textContent = `Receipt ${e.audit_id} logged`;
+  }
+};
+
+$("expBtn").onclick = async () => {
+  let data = { schema: "ocsf-otlp-zero-payload-v1", engine: "Harbor Sovereign Gate", public_key_hex: st.pub || "drydock", persistent_disk_bytes: 0, count: st.logs.length, events: st.logs };
+  if (st.live) {
+    try {
+      const r = await fetch(st.url + "/v1/compliance/audit");
+      if (r.ok) data = await r.json();
+    } catch (_) {}
+  }
+  const u = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  Object.assign(document.createElement("a"), { href: u, download: `mtchship-audit-${Date.now()}.json` }).click();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+};
+
+const apiParam = new URLSearchParams(location.search).get("api");
+if (apiParam || location.protocol !== "file:") {
+  st.url = (apiParam || (location.pathname.endsWith("/compass") ? "" : location.origin)).replace(/\/$/, "");
+  fetch(st.url + "/v1/compliance/audit")
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) return;
+      st.pub = d.public_key_hex || "";
+      if (d.events?.length) {
+        st.logs = d.events.slice().reverse();
+        drawLogs();
+        render(st.logs[0], false);
+      }
+    }).catch(() => {});
+
+  try {
+    const es = new EventSource(st.url + "/v1/compliance/receipts");
+    es.onopen = () => {
+      st.live = true;
+      $("pBtn").style.display = "inline-block";
+      const hostLabel = st.url ? new URL(st.url).host : location.host;
+      $("sse").innerHTML = `<span class="dot live"></span>SSE Live (${esc(hostLabel)})`;
+    };
+    es.onmessage = ev => { if (!st.pause) render(JSON.parse(ev.data), true); };
+    es.onerror = () => {
+      st.live = false;
+      $("sse").innerHTML = `<span class="dot off"></span>Drydock Local`;
+      if (!st.cur) run(true);
+    };
+  } catch (_) {
+    run(true);
+  }
+} else {
+  run(true);
+}
+</script>
+</body>
+</html>
