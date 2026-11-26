@@ -44,6 +44,15 @@ func newRuntimeState(cfg *config.Config) *RuntimeState {
 }
 
 func (rs *RuntimeState) scrubBuffer(buf []byte) {
+	rs.mu.RLock()
+	tier := rs.activeTier
+	region := rs.cfg.Simulation.Region
+	rs.mu.RUnlock()
+
+	rs.scrubBufferWithMeta(buf, tier, region)
+}
+
+func (rs *RuntimeState) scrubBufferWithMeta(buf []byte, tier, region string) {
 	n := len(buf)
 	for i := range buf {
 		buf[i] = 0x00
@@ -52,11 +61,6 @@ func (rs *RuntimeState) scrubBuffer(buf []byte) {
 	rs.zeroedBytesTotal.Add(uint64(n))
 
 	if n > 0 {
-		rs.mu.RLock()
-		tier := rs.activeTier
-		region := rs.cfg.Simulation.Region
-		rs.mu.RUnlock()
-
 		compliance.PublishComplianceReceipt(compliance.ComplianceReceipt{
 			CoreTier:       tier,
 			HubID:          region,
@@ -70,11 +74,14 @@ func (rs *RuntimeState) scrubBuffer(buf []byte) {
 
 func (rs *RuntimeState) scrubAll() {
 	rs.mu.Lock()
-	defer rs.mu.Unlock()
+	tier := rs.activeTier
+	region := rs.cfg.Simulation.Region
 	for k, v := range rs.edgeState {
-		rs.scrubBuffer(v)
+		rs.scrubBufferWithMeta(v, tier, region)
 		delete(rs.edgeState, k)
 	}
+	rs.mu.Unlock()
+
 	rs.zeroScrubPasses.Add(1)
 }
 
@@ -132,7 +139,6 @@ func main() {
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Register Harbor Sovereign Gate Compliance SSE, OCSF Audit & Ed25519 Pubkey endpoints
 	compliance.RegisterComplianceRoutes(mux)
 
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -177,8 +183,10 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 				return
 			}
 			rs.mu.Lock()
+			tier := rs.activeTier
+			region := rs.cfg.Simulation.Region
 			if old, ok := rs.edgeState[key]; ok {
-				rs.scrubBuffer(old)
+				rs.scrubBufferWithMeta(old, tier, region)
 			}
 			rs.edgeState[key] = body
 			rs.mu.Unlock()
@@ -186,8 +194,10 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 
 		case http.MethodDelete:
 			rs.mu.Lock()
+			tier := rs.activeTier
+			region := rs.cfg.Simulation.Region
 			if old, ok := rs.edgeState[key]; ok {
-				rs.scrubBuffer(old)
+				rs.scrubBufferWithMeta(old, tier, region)
 				delete(rs.edgeState, key)
 			}
 			rs.mu.Unlock()
