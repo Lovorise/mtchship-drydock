@@ -168,7 +168,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 || args != "up" {
+	if len(args) < 1 || strings.Join(args[:1], "") != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
 	}
 
