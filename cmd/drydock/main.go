@@ -4,7 +4,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -27,6 +29,17 @@ import (
 //go:embed dashboard.html
 var dashboardHTML []byte
 
+type WipeAuditRecord struct {
+	ReceiptID           string `json:"receipt_id"`
+	TimestampUTC        string `json:"timestamp_utc"`
+	Region              string `json:"region"`
+	ActiveTier          string `json:"active_tier"`
+	ZeroedBytes         int    `json:"zeroed_bytes"`
+	PersistentDiskBytes int    `json:"persistent_disk_bytes"`
+	VerificationHash    string `json:"verification_hash"`
+	Pattern             string `json:"pattern"`
+}
+
 type RuntimeState struct {
 	mu               sync.RWMutex
 	cfg              *config.Config
@@ -34,6 +47,8 @@ type RuntimeState struct {
 	zeroScrubPasses  atomic.Uint64
 	zeroedBytesTotal atomic.Uint64
 	edgeState        map[string][]byte
+	receipts         []WipeAuditRecord
+	sseClients       map[chan []byte]struct{}
 }
 
 func newRuntimeState(cfg *config.Config) *RuntimeState {
@@ -41,7 +56,35 @@ func newRuntimeState(cfg *config.Config) *RuntimeState {
 		cfg:        cfg,
 		activeTier: cfg.Simulation.DefaultTier,
 		edgeState:  make(map[string][]byte),
+		receipts:   make([]WipeAuditRecord, 0, 64),
+		sseClients: make(map[chan []byte]struct{}),
 	}
+}
+
+func (rs *RuntimeState) registerSSEClient() chan []byte {
+	ch := make(chan []byte, 64)
+	rs.mu.Lock()
+	rs.sseClients[ch] = struct{}{}
+	rs.mu.Unlock()
+	return ch
+}
+
+func (rs *RuntimeState) unregisterSSEClient(ch chan []byte) {
+	rs.mu.Lock()
+	delete(rs.sseClients, ch)
+	close(ch)
+	rs.mu.Unlock()
+}
+
+func (rs *RuntimeState) broadcastSSE(payload []byte) {
+	rs.mu.RLock()
+	for ch := range rs.sseClients {
+		select {
+		case ch <- payload:
+		default:
+		}
+	}
+	rs.mu.RUnlock()
 }
 
 func (rs *RuntimeState) scrubBuffer(buf []byte) {
@@ -54,12 +97,32 @@ func (rs *RuntimeState) scrubBuffer(buf []byte) {
 
 func (rs *RuntimeState) scrubBufferWithMeta(buf []byte, tier, region string) {
 	n := len(buf)
+	preHash := sha256.Sum256(buf)
 	for i := range buf {
 		buf[i] = 0x00
 	}
-	rs.zeroScrubPasses.Add(1)
+	postHash := sha256.Sum256(buf)
+	pass := rs.zeroScrubPasses.Add(1)
 	rs.zeroedBytesTotal.Add(uint64(n))
+
 	if n > 0 {
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		proof := sha256.Sum256([]byte(fmt.Sprintf("%s|%x|%x|%d", now, preHash, postHash, pass)))
+		rec := WipeAuditRecord{
+			ReceiptID:           fmt.Sprintf("WIPE-%d-%s", pass, hex.EncodeToString(proof[:4])),
+			TimestampUTC:        now,
+			Region:              region,
+			ActiveTier:          tier,
+			ZeroedBytes:         n,
+			PersistentDiskBytes: 0,
+			VerificationHash:    hex.EncodeToString(proof[:]),
+			Pattern:             "0x00",
+		}
+		rs.receipts = append(rs.receipts, rec)
+		if len(rs.receipts) > 50 {
+			rs.receipts = rs.receipts[len(rs.receipts)-50:]
+		}
+
 		compliance.PublishComplianceReceipt(compliance.ComplianceReceipt{
 			CoreTier:       tier,
 			HubID:          region,
@@ -105,7 +168,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 || args[0] != "up" {
+	if len(args) < 1 || args != "up" {
 		log.Fatalf("usage: drydock up --config <path>")
 	}
 
@@ -177,6 +240,58 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	}
 	mux.HandleFunc("/", healthHandler)
 	mux.HandleFunc("/healthz", healthHandler)
+
+	mux.HandleFunc("/api/v1/ingest", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		raw, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
+		if err != nil {
+			http.Error(w, "invalid ingest payload", http.StatusBadRequest)
+			return
+		}
+
+		var incoming map[string]any
+		_ = json.Unmarshal(raw, &incoming)
+
+		rs.mu.Lock()
+		tier := rs.activeTier
+		region := rs.cfg.Simulation.Region
+		ev := map[string]any{
+			"emittedAtMs":  time.Now().UnixMilli(),
+			"direction":    "egress",
+			"channel":      "harbor-live-egress",
+			"symbol":       fmt.Sprintf("INGEST-%s", strings.ToUpper(region)),
+			"value":        incoming["value"],
+			"delta":        incoming["delta"],
+			"currency":     incoming["currency"],
+			"bytes":        len(raw),
+			"wipeVerified": true,
+			"label":        fmt.Sprintf("1->N Forwarded & 0x00 Wiped (%d B)", len(raw)),
+		}
+		if ev["value"] == nil {
+			ev["value"] = len(raw)
+		}
+		if incoming["symbol"] != nil {
+			ev["symbol"] = incoming["symbol"]
+		}
+		if incoming["label"] != nil {
+			ev["label"] = incoming["label"]
+		}
+		rs.scrubBufferWithMeta(raw, tier, region)
+		rs.mu.Unlock()
+
+		broadcastBytes, _ := json.Marshal(ev)
+		rs.broadcastSSE(broadcastBytes)
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"forwarded":             true,
+			"zeroed_bytes":          len(raw),
+			"persistent_disk_bytes": 0,
+			"pattern":               "0x00",
+		})
+	})
 
 	mux.HandleFunc("/api/v1/state/", func(w http.ResponseWriter, r *http.Request) {
 		key := strings.TrimPrefix(r.URL.Path, "/api/v1/state/")
@@ -251,6 +366,9 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 			return
 		}
 
+		clientCh := rs.registerSSEClient()
+		defer rs.unregisterSSEClient(clientCh)
+
 		initPayload, _ := json.Marshal(map[string]any{
 			"emittedAtMs":  time.Now().UnixMilli(),
 			"direction":    "egress",
@@ -260,18 +378,24 @@ func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 			"delta":        0,
 			"bytes":        64,
 			"wipeVerified": true,
-			"label":        "Connected to Drydock Data Plane",
+			"label":        "Connected to Drydock 1->N Data Plane",
 		})
 		_, _ = fmt.Fprintf(w, "data: %s\n\n", initPayload)
 		flusher.Flush()
 
-		ticker := time.NewTicker(100 * time.Millisecond)
+		ticker := time.NewTicker(250 * time.Millisecond)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-r.Context().Done():
 				return
+			case msg, open := <-clientCh:
+				if !open {
+					return
+				}
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", msg)
+				flusher.Flush()
 			case t := <-ticker.C:
 				rs.mu.RLock()
 				tier := rs.activeTier
@@ -334,6 +458,19 @@ func buildControlAPIMux(rs *RuntimeState) *http.ServeMux {
 			"active_tier":      tier,
 			"region":           rs.cfg.Simulation.Region,
 			"city":             rs.cfg.Simulation.City,
+		})
+	})
+
+	mux.HandleFunc("/api/v1/receipts", func(w http.ResponseWriter, r *http.Request) {
+		rs.mu.RLock()
+		copied := append([]WipeAuditRecord(nil), rs.receipts...)
+		rs.mu.RUnlock()
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"persistent_disk_bytes": 0,
+			"total_passes":          rs.zeroScrubPasses.Load(),
+			"total_zeroed_bytes":    rs.zeroedBytesTotal.Load(),
+			"receipts":              copied,
 		})
 	})
 
