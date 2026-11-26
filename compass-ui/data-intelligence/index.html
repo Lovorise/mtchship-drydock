@@ -99,7 +99,7 @@
               <option value="UK">UK (GBP £)</option>
               <option value="US">US (USD $)</option>
               <option value="EU">EU (EUR €)</option>
-              <option value="CH">CH (CHF 0.05)</option>
+              <option value="CH">CH (CHF)</option>
               <option value="CA">CA (CAD $)</option>
               <option value="AU">AU (AUD $)</option>
               <option value="SG">SG (SGD $)</option>
@@ -124,65 +124,16 @@
         </div>
 
         <div class="kpi-grid">
-          <div class="card"><div class="kpi-label">Net / Ingress Base</div><div id="kpi-net" class="kpi-val mono">£6,410.25</div><div class="kpi-sub">Deterministic in-RAM</div></div>
-          <div class="card"><div class="kpi-label">Tax / VAT</div><div id="kpi-tax" class="kpi-val mono">£1,282.05</div><div class="kpi-sub">Auto-reconciled</div></div>
-          <div class="card"><div class="kpi-label">Gross / Total</div><div id="kpi-gross" class="kpi-val mono">£7,692.30</div><div class="kpi-sub">Cross-check verified</div></div>
-          <div class="card"><div class="kpi-label">Live Guests / Throughput</div><div id="kpi-live" class="kpi-val mono">48,250</div><div id="kpi-live-sub" class="kpi-sub">6 / 6 Global Hubs Active</div></div>
-          <div class="card"><div class="kpi-label">0x00 RAM Wipe &amp; Disk</div><div id="kpi-wipe" class="kpi-val mono">0 B / 0x00</div><div id="kpi-wipe-sub" class="kpi-sub">persistent_disk_bytes: 0</div></div>
+          <div class="card"><div class="kpi-label">Net / Ingress Base</div><div id="kpi-net" class="kpi-val mono">£0.00</div><div class="kpi-sub">Deterministic in-RAM</div></div>
+          <div class="card"><div class="kpi-label">Tax / VAT</div><div id="kpi-tax" class="kpi-val mono">£0.00</div><div class="kpi-sub">Auto-reconciled</div></div>
+          <div class="card"><div class="kpi-label">Gross / Total</div><div id="kpi-gross" class="kpi-val mono">£0.00</div><div class="kpi-sub">Cross-check verified</div></div>
+          <div class="card"><div class="kpi-label">Live Guests / Throughput</div><div id="kpi-live" class="kpi-val mono">0</div><div class="kpi-sub">6 / 6 Global Hubs Active</div></div>
+          <div class="card"><div class="kpi-label">0x00 RAM Wipe &amp; Disk</div><div id="kpi-wipe" class="kpi-val mono">0 B / 0x00</div><div class="kpi-sub">persistent_disk_bytes: 0</div></div>
         </div>
 
         <div class="grid-2">
           <div class="card">
             <div class="card-head">
-              <h2 class="card-title">Universal Chart Explorer (36 Types)</h2>
-              <select id="chart-select" aria-label="Chart Type"></select>
-            </div>
-            <div id="primary-chart-slot"></div>
-          </div>
-          <div class="card">
-            <div class="card-head">
-              <h2 class="card-title">Global 6-Hub Active-Active Mesh</h2>
-              <span class="badge">London Core Hub</span>
-            </div>
-            <div id="geo-chart-slot"></div>
-          </div>
-        </div>
-
-        <div class="grid-equal">
-          <div class="card">
-            <div class="card-head">
-              <h2 class="card-title">Bank Transactions &amp; Ingress/Egress Ledger</h2>
-              <span class="badge">INSTANT CLEARING</span>
-            </div>
-            <div id="ledger-slot"></div>
-          </div>
-          <div class="card">
-            <div class="card-head">
-              <h2 class="card-title">Harbor Live Egress Stream &amp; 0x00 Receipts</h2>
-              <span class="badge">DDR5 PURE-RAM</span>
-            </div>
-            <div id="feed-slot"></div>
-          </div>
-        </div>
-
-        <div class="dark-banner">
-          <div>
-            <div class="kicker" style="color:#9CA3AF;">ZERO-DISK FINOPS &amp; INSTANT LIVE EGRESS</div>
-            <div style="font-size:18px;font-weight:700;margin-top:4px;">Sub-second blind forwarding. Zero persistent disk bytes.</div>
-            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Local evaluation on 127.0.0.1 · Production-ready on MTCHSHIP Bare-Metal DDR5 RAM</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:20px;">
-            <div>
-              <div style="font-size:24px;font-weight:700;" class="mono">0x00</div>
-              <div style="font-size:11px;color:#9CA3AF;">Deterministic post-flush wipe</div>
-            </div>
-            <span class="badge" style="background:#FFFFFF;color:#111111;font-weight:600;">Compass UI v1.0</span>
-          </div>
-        </div>
-      </main>
-    </div>
-  </div>
-
   <script type="module">
     import { createCompassSolver, CONTROL_PLANE_REGIONS } from './solver.js';
     import { COMPASS_CHART_CATALOG, renderCompassChart, createLiveFeedController } from './charts.js';
@@ -198,16 +149,11 @@
       : 'http://127.0.0.1:9090';
     let dataPlaneUrl = 'http://127.0.0.1:8443';
 
-    const txRows = [
-      { description: 'Ingress · VoidChassis Edge Stream #01', direction: 'ingress', amount: 4200.00 },
-      { description: 'Ingress · Direct Enterprise Feed #02', direction: 'ingress', amount: 3150.50 },
-      { description: 'Egress · Harbor Live Intelligence Block', direction: 'egress', amount: 1850.00 },
-      { description: 'Egress · BYOS Data Warehouse Sync', direction: 'egress', amount: 940.25 },
-    ];
+    const txRows = [];
 
-    let netVal = 6410.25;
-    let taxVal = 1282.05;
-    let grossVal = 7692.30;
+    let netVal = 0;
+    let taxVal = 0;
+    let grossVal = 0;
 
     let seriesItems = [
       { label: 'Net Base', value: netVal },
@@ -233,17 +179,24 @@
     chartSelect.value = 'waterfall';
 
     const feed = createLiveFeedController?.({ currency: 'GBP' });
-    feed?.push({ direction: 'egress', symbol: 'London-Core · Live-1->N', value: 7692.30, delta: 142.50, emittedAtMs: Date.now() - 2, wipeVerified: true });
-    feed?.push({ direction: 'ingress', symbol: 'VoidChassis · Edge-RX', value: 4200.00, delta: 85.00, emittedAtMs: Date.now() - 1, wipeVerified: true });
+
     function activeCurrency() {
       return CONTROL_PLANE_REGIONS?.[region]?.defaultCurrency || 'GBP';
     }
 
+    function formatAmount(val, cur) {
+      if (cur === 'CHF') {
+        const rounded = Math.round(val * 20) / 20;
+        return `CHF ${rounded.toFixed(2)}`;
+      }
+      return solver.formatCurrency?.(val, cur) || `${cur} ${val.toFixed(2)}`;
+    }
+
     function renderAll() {
       const cur = activeCurrency();
-      el('kpi-net').textContent = solver.formatCurrency?.(netVal, cur) || String(netVal);
-      el('kpi-tax').textContent = solver.formatCurrency?.(taxVal, cur) || String(taxVal);
-      el('kpi-gross').textContent = solver.formatCurrency?.(grossVal, cur) || String(grossVal);
+      el('kpi-net').textContent = formatAmount(netVal, cur);
+      el('kpi-tax').textContent = formatAmount(taxVal, cur);
+      el('kpi-gross').textContent = formatAmount(grossVal, cur);
 
       renderCompassChart?.(el('primary-chart-slot'), { chartType: chartSelect.value, currency: cur, items: seriesItems, transactions: txRows, events: feed?.getSnapshot() || [] });
       renderCompassChart?.(el('geo-chart-slot'), { chartType: 'geo-6hub', currency: cur, items: seriesItems });
