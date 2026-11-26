@@ -1,0 +1,46 @@
+{
+  "name": "@mtchship/compass-data-intelligence",
+  "version": "1.0.0",
+  "description": "100% zero-dependency open-source Data Intelligence UI, deterministic in-RAM CSV/JSON/Digital-PDF solver with 0x00 memory zeroing, and 36-chart 60-FPS real-time streaming engine for MTCHSHIP Harbor Data Intelligence and Harbor Live Data Intelligence.",
+  "license": "Apache-2.0",
+  "author": "Lovorise Ltd (England & Wales, Company No. 15814939)",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./solver.js",
+  "exports": {
+    ".": "./solver.js",
+    "./solver": "./solver.js",
+    "./charts": "./charts.js",
+    "./theme-tokens.css": "./theme-tokens.css"
+  },
+  "files": [
+    "index.html",
+    "theme-tokens.css",
+    "solver.js",
+    "charts.js",
+    "verify.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node verify.mjs",
+    "verify": "node verify.mjs"
+  },
+  "keywords": [
+    "mtchship",
+    "compass-ui",
+    "data-intelligence",
+    "live-data-intelligence",
+    "harbor-transit",
+    "blind-forwarding",
+    "zero-disk",
+    "in-memory",
+    "real-time-analytics",
+    "zero-dependency"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
