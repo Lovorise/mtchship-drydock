@@ -49,7 +49,6 @@ func (rs *RuntimeState) scrubBuffer(buf []byte) {
 	tier := rs.activeTier
 	region := rs.cfg.Simulation.Region
 	rs.mu.RUnlock()
-
 	rs.scrubBufferWithMeta(buf, tier, region)
 }
 
@@ -60,7 +59,6 @@ func (rs *RuntimeState) scrubBufferWithMeta(buf []byte, tier, region string) {
 	}
 	rs.zeroScrubPasses.Add(1)
 	rs.zeroedBytesTotal.Add(uint64(n))
-
 	if n > 0 {
 		compliance.PublishComplianceReceipt(compliance.ComplianceReceipt{
 			CoreTier:       tier,
@@ -136,6 +134,7 @@ func main() {
 	log.Printf("[INFO] Deterministic 0x00 RAM zeroing complete (passes: %d, bytes_zeroed: %d).",
 		state.zeroScrubPasses.Load(), state.zeroedBytesTotal.Load())
 }
+
 func buildDataPlaneMux(rs *RuntimeState) *http.ServeMux {
 	mux := http.NewServeMux()
 
