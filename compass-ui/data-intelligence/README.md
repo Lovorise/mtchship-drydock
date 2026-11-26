@@ -6,6 +6,12 @@
 
 Teams can adapt all visual tokens (wordmark/logo, color palette, borders, typography, and layout) and test deterministic in-RAM file parsing (`CSV`, `JSON`, `Digital PDF`) alongside instant, zero-delay real-time streaming analytics locally before connecting to **MTCHSHIP Bare-Metal DDR5 RAM Infrastructure**.
 
+## Why Zero-Disk? (Compliance & TCO Impact)
+
+* **Zero Data-at-Rest Risk (`persistent_disk_bytes: 0`):** Processes sensitive financial, enterprise, and personal records exclusively in volatile DDR5 RAM—eliminating disk-storage exposure and simplifying **UK GDPR**, **Data Protection Act 2018**, and **EU GDPR** audits.
+* **Replaces Legacy Brokers & Caches:** Delivers sub-second `1 -> N` stream forwarding directly from RAM, removing the operational overhead and latency of traditional message brokers and cache clusters.
+* **Cryptographic Proof of Erasure:** Every processed payload and stream batch concludes with deterministic `0x00` memory zeroing backed by **Ed25519-signed wipe receipts**.
+
 ## 1. Repository Structure
 
 ```text
@@ -30,7 +36,11 @@ All interface components, charts, and styling rules are 100% MTCHSHIP Compass UI
 
 The interface runs locally in any desktop browser without external runtime dependencies:
 
-1. Serve `compass-ui/data-intelligence/` via `127.0.0.1:8080` (or open `index.html`).
+```bash
+cd compass-ui/data-intelligence && python3 -m http.server 8080
+```
+
+1. Open `http://127.0.0.1:8080` in your browser.
 2. **In-RAM File & Digital PDF Parsing:** Upload local `PDF`, `CSV`, or `JSON` files to test X/Y coordinate row reconstruction, semantic field mapping (Gross, Net, Tax/VAT), mathematical cross-checks, and deterministic `0x00` memory buffer zeroing.
 3. **Instant Real-Time Stream Simulation:** Start the built-in 60-FPS frame-coalesced Live Egress Feed (`SSE` / `OData` / `OTLP` / `OCSF` compatible) to test sub-second telemetry, live visitor counters, banking ledgers, and ticker updates with zero batch delay.
 
@@ -47,4 +57,3 @@ Connecting `compass-ui/data-intelligence` to **MTCHSHIP Bare-Metal DDR5 RAM Infr
 
 * **Global Active-Active Mesh (6 Hubs):** **Europe** (London Core Hub), **North America**, **APAC**, **Middle East**, **South America**, and **Africa**.
 * **Zero-Disk Compliance:** `persistent_disk_bytes: 0`, swap physically disabled, deterministic `0x00` post-flush memory zeroing, and cryptographically signed Ed25519 wipe receipts aligned with **UK GDPR**, **Data Protection Act 2018**, and **EU GDPR**.
-* **Commercial Provider:** **Lovorise Ltd** (England & Wales, Company No. **15814939**).
