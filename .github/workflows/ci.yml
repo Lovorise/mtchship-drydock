@@ -42,7 +42,7 @@ jobs:
           curl -sf "$DATA_URL" | grep -q '"persistent_disk_bytes":0'
 
           # 2. Verify Embedded Control Plane Dashboard UI (127.0.0.1:9090)
-          curl -sf "$CTRL_URL" | grep -q "MTCHSHIP / Local Control Plane"
+          curl -sf "$CTRL_URL" | grep -q "MTCHSHIP / Overview"
 
           # 3. Verify Tier Switch (POST /api/v1/tier)
           curl -sf -X POST "$CTRL_URL/api/v1/tier" \
