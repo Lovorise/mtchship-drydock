@@ -25,6 +25,7 @@ func recordAuditEvent(evt ComplianceReceipt) {
 	auditRing = append(auditRing, evt)
 }
 
+// HandleComplianceAuditJSON returns the volatile OCSF/OTLP zero-payload audit log as JSON.
 func HandleComplianceAuditJSON(w http.ResponseWriter, r *http.Request) {
 	setCORSHeaders(w)
 	if r.Method == http.MethodOptions {
