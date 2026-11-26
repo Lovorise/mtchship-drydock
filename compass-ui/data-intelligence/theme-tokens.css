@@ -1,0 +1,147 @@
+/**
+ * MTCHSHIP Compass: Data Intelligence UI — White-Label Design Tokens
+ * Path: compass-ui/data-intelligence/theme-tokens.css
+ * 100% MTCHSHIP Compass UI — Zero third-party libraries, zero external dependencies.
+ *
+ * Copyright © 2026 Lovorise Ltd (England & Wales, Company No. 15814939).
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ */
+
+:root {
+  /* 1. Brand Wordmark & Logo Customization */
+  --brand-name: "MTCHSHIP Compass";
+  --brand-subtitle: "Data Intelligence";
+  --brand-logo-url: none;
+  --brand-logo-height: 24px;
+
+  /* 2. Monochrome High-Contrast Surfaces (synced with Compass Universal Widget) */
+  --bg-canvas: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F4F4F5;
+  --bg-elevated: #FFFFFF;
+  --bg-inverse: #111111;
+
+  /* 3. Typography & Ink */
+  --ink-primary: #111111;
+  --ink-secondary: #3F3F46;
+  --ink-muted: #71717A;
+  --ink-subtle: #A1A1AA;
+  --ink-inverse: #FFFFFF;
+
+  /* 4. Borders & Corner Radii (--r & --bd) */
+  --r: 8px;
+  --r-sm: 4px;
+  --r-lg: 12px;
+  --r-pill: 9999px;
+
+  --bd-color: #E4E4E7;
+  --bd-color-strong: #111111;
+  --bd: 1px solid var(--bd-color);
+  --bd-strong: 1px solid var(--bd-color-strong);
+
+  /* 5. Chart Series Palette (matches createUniversalWidget default palette) */
+  --chart-1: #111111;
+  --chart-2: #3F3F46;
+  --chart-3: #71717A;
+  --chart-4: #A1A1AA;
+  --chart-5: #E4E4E7;
+
+  /* 6. Status & RAM Hygiene Tokens */
+  --status-ok: #15803D;
+  --status-ok-bg: #F0FDF4;
+  --status-warn: #B45309;
+  --status-warn-bg: #FFFBEB;
+  --status-danger: #B91C1C;
+  --status-danger-bg: #FEF2F2;
+  --status-wipe: #111111;
+
+  /* 7. Native System Font Stacks (Zero External Font Requests) */
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  /* 8. Layout & Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --container-max: 1440px;
+  --shadow-subtle: 0 1px 2px rgba(17, 17, 17, 0.04);
+}
+
+/* Dark Surface Mode ([data-theme="dark"]) */
+[data-theme="dark"] {
+  --bg-canvas: #09090B;
+  --bg-surface: #111113;
+  --bg-subtle: #18181B;
+  --bg-elevated: #1F1F23;
+  --bg-inverse: #FAFAFA;
+
+  --ink-primary: #FAFAFA;
+  --ink-secondary: #D4D4D8;
+  --ink-muted: #A1A1AA;
+  --ink-subtle: #71717A;
+  --ink-inverse: #111111;
+
+  --bd-color: #27272A;
+  --bd-color-strong: #FAFAFA;
+
+  --chart-1: #FAFAFA;
+  --chart-2: #D4D4D8;
+  --chart-3: #A1A1AA;
+  --chart-4: #71717A;
+  --chart-5: #3F3F46;
+
+  --status-ok: #4ADE80;
+  --status-ok-bg: rgba(74, 222, 128, 0.12);
+  --status-warn: #FBBF24;
+  --status-warn-bg: rgba(251, 191, 36, 0.12);
+  --status-danger: #F87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.12);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.compass-card {
+  background: var(--bg-surface);
+  border: var(--bd);
+  border-radius: var(--r);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-subtle);
+}
+
+.compass-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  border: var(--bd);
+  background: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-secondary);
+}
+
+.compass-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
