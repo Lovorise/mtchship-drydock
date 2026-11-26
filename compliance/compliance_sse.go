@@ -3,14 +3,19 @@ package compliance
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+//go:embed index.html compass.js
+var compassAssets embed.FS
 
 type ComplianceReceipt struct {
 	AuditID             string            `json:"audit_id"`
@@ -26,9 +31,6 @@ type ComplianceReceipt struct {
 	Verdict             string            `json:"verdict"`
 	TokenizedPreview    map[string]string `json:"tokenized_preview"`
 	RedactedCount       int               `json:"redacted_count"`
-	FanoutTargets       int               `json:"fanout_targets,omitempty"`
-	EgressTarget        string            `json:"egress_target,omitempty"`
-	CompressionRatio    string            `json:"compression_ratio,omitempty"`
 	EnclaveAttestation  string            `json:"enclave_attestation,omitempty"`
 	LatencyUs           int64             `json:"latency_us"`
 	ZeroedBytes         int               `json:"zeroed_bytes"`
@@ -54,8 +56,6 @@ func init() {
 	}
 }
 
-// PublishComplianceReceipt signs a Harbor Sovereign Gate event with Ed25519,
-// records it in the volatile in-RAM audit ring buffer, and broadcasts it via SSE.
 func PublishComplianceReceipt(evt ComplianceReceipt) {
 	if evt.TimestampUTC == "" {
 		evt.TimestampUTC = time.Now().UTC().Format(time.RFC3339Nano)
@@ -86,7 +86,6 @@ func PublishComplianceReceipt(evt ComplianceReceipt) {
 	}
 	evt.PersistentDiskBytes = 0
 	signReceipt(&evt)
-
 	recordAuditEvent(evt)
 
 	sseMu.RLock()
@@ -121,14 +120,21 @@ func signReceipt(evt *ComplianceReceipt) {
 	clear(sig)
 }
 
-// RegisterComplianceRoutes registers the SSE stream, OCSF audit export, and ephemeral public key endpoints.
 func RegisterComplianceRoutes(mux *http.ServeMux) {
+	if subFS, err := fs.Sub(compassAssets, "."); err == nil {
+		fileServer := http.FileServer(http.FS(subFS))
+		mux.HandleFunc("/compass", func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path = "/index.html"
+			fileServer.ServeHTTP(w, r)
+		})
+		mux.HandleFunc("/compass.js", fileServer.ServeHTTP)
+	}
+
 	mux.HandleFunc("/v1/compliance/receipts", HandleComplianceReceiptsSSE)
 	mux.HandleFunc("/v1/compliance/audit", HandleComplianceAuditJSON)
 	mux.HandleFunc("/v1/compliance/pubkey", HandleCompliancePublicKey)
 }
 
-// HandleComplianceReceiptsSSE streams live compliance, audit, and Ed25519 wipe receipts over SSE.
 func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
 	setCORSHeaders(w)
 	if r.Method == http.MethodOptions {
@@ -189,7 +195,6 @@ func HandleComplianceReceiptsSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleCompliancePublicKey returns the ephemeral Ed25519 public key for client-side verification.
 func HandleCompliancePublicKey(w http.ResponseWriter, r *http.Request) {
 	setCORSHeaders(w)
 	if r.Method == http.MethodOptions {
@@ -229,6 +234,8 @@ func newSimulatedReceipt() ComplianceReceipt {
 		AuditID:             "aud_" + hex.EncodeToString(b[:4]),
 		TimestampUTC:        time.Now().UTC().Format(time.RFC3339Nano),
 		Engine:              "Harbor Sovereign Gate",
+		Domain:              "://customer.com",
+		PairedPlane:         "VoidChassis Active-Active Mesh",
 		EnforcementLayer:    "SmartNIC XDP_DRV (Surge Valve + Quantum Fuse)",
 		Verdict:             "ALLOW_REDACTED_0X00",
 		TokenizedPreview:    map[string]string{"identifier": "ID_HMAC_" + hex.EncodeToString(b[:2])},
@@ -238,61 +245,45 @@ func newSimulatedReceipt() ComplianceReceipt {
 
 	switch idx {
 	case 0:
-		evt.CoreTier = "business"
-		evt.Domain = "api.fintech-uk.co.uk"
+		evt.CoreTier = "pro"
 		evt.CNAMEDirection = "ingress"
-		evt.PairedPlane = "VoidChassis Active-Active Mesh"
 		evt.HubID = "eu-lon-01"
-		evt.Framework = "UK GDPR / Data Protection Act 2018 / FCA"
-		evt.LatencyUs = 15
+		evt.Framework = "EU GDPR / UK DPA 2018 / ISO 27001"
+		evt.LatencyUs = 19
 		evt.ZeroedBytes = 512
 	case 1:
-		evt.CoreTier = "enterprise"
-		evt.Domain = "stream.global-sports.io"
+		evt.CoreTier = "business"
 		evt.CNAMEDirection = "egress"
-		evt.PairedPlane = "Harbor Transit (1->N Blind Fan-out)"
 		evt.HubID = "na-iad-01"
-		evt.Framework = "FINMA / EU GDPR / HIPAA"
-		evt.FanoutTargets = 16
-		evt.LatencyUs = 11
-		evt.ZeroedBytes = 4096
+		evt.Framework = "SOC 2 Type II / CCPA / CPRA"
+		evt.LatencyUs = 15
+		evt.ZeroedBytes = 2048
 	case 2:
 		evt.CoreTier = "enterprise"
-		evt.Domain = "://enterprise-bank.com"
 		evt.CNAMEDirection = "egress"
-		evt.PairedPlane = "Harbor Data Intelligence (Zero-Disk FinOps)"
 		evt.HubID = "eu-lon-01"
-		evt.Framework = "DORA / UK FCA / EU GDPR"
-		evt.EgressTarget = "Zero-Disk BI / Warehouse Egress"
-		evt.CompressionRatio = "4.4x"
-		evt.LatencyUs = 28
-		evt.ZeroedBytes = 16384
+		evt.Framework = "EU GDPR / ISO 27001 / ISO 27701 / SOC 2"
+		evt.LatencyUs = 11
+		evt.ZeroedBytes = 8192
 	case 3:
 		evt.CoreTier = "enterprise"
-		evt.Domain = "inference.med-ai.sg"
 		evt.CNAMEDirection = "egress"
-		evt.PairedPlane = "GPU Forge Harbor (Single-Tenant)"
 		evt.HubID = "apac-sin-01"
-		evt.Framework = "MAS TRM / PDPA"
-		evt.LatencyUs = 32
-		evt.ZeroedBytes = 65536
+		evt.Framework = "APAC PDPA / ISO 27001 / Cross-Border Governance"
+		evt.LatencyUs = 14
+		evt.ZeroedBytes = 4096
 	case 4:
 		evt.CoreTier = "business"
-		evt.Domain = "live.mena-media.ae"
-		evt.CNAMEDirection = "egress"
-		evt.PairedPlane = "Stream Harbor (Dedicated 40 Gbps)"
+		evt.CNAMEDirection = "ingress"
 		evt.HubID = "me-dxb-01"
-		evt.Framework = "DIFC Data Protection Law / UAE PDPL"
-		evt.FanoutTargets = 48
-		evt.LatencyUs = 14
-		evt.ZeroedBytes = 32768
+		evt.Framework = "MENA PDPL / DIFC Data Protection / ISO 27001"
+		evt.LatencyUs = 16
+		evt.ZeroedBytes = 2048
 	default:
 		evt.CoreTier = "enterprise"
-		evt.Domain = "vault.swiss-custody.ch"
 		evt.CNAMEDirection = "egress"
-		evt.PairedPlane = "Sealed Hold (Enclave Isolation)"
 		evt.HubID = "eu-lon-01"
-		evt.Framework = "FINMA / UK GDPR / Dual-Failure Hold"
+		evt.Framework = "FADP / EU GDPR / Confidential Computing"
 		evt.EnclaveAttestation = "AMD SEV-SNP / Intel TDX + ZK-PoR"
 		evt.LatencyUs = 9
 		evt.ZeroedBytes = 8192
