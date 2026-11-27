@@ -1,5 +1,6 @@
 {
   "product": "MTCHSHIP Compass UI",
+  "copyright": "Copyright (c) 2026 Lovorise Ltd.",
   "license": "Apache-2.0",
   "defaultModule": "data-intelligence",
   "modules": [
@@ -13,6 +14,7 @@
     { "id": "activity", "num": "08", "label": "Activity", "path": "../activity/index.html", "enabled": false },
     { "id": "billing", "num": "09", "label": "Billing", "path": "../billing/index.html", "enabled": false },
     { "id": "team", "num": "10", "label": "Team", "path": "../team/index.html", "enabled": false },
-    { "id": "settings", "num": "11", "label": "Settings", "path": "../settings/index.html", "enabled": false }
+    { "id": "settings", "num": "11", "label": "Settings", "path": "../settings/index.html", "enabled": false },
+    { "id": "comms", "num": "12", "label": "Comms Workspace", "path": "../comms/index.html", "enabled": true }
   ]
 }
