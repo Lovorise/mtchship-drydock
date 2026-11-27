@@ -45,21 +45,69 @@ let presetForms = [
   }
 ];
 
-let aDept = 'Front-Line', tab = 'DEPT', fLbl = '', id = 1, wMode = false, isLive = true, seq = 103;
+let aDept = 'Front-Line';
+let tab = 'DEPT';
+let fLbl = '';
+let id = 1;
+let wMode = false;
+let isLive = true;
+let seq = 103;
+
 let missed = [{ cid: 'm1', tid: 1, n: 'Customer #101', prio: 'HIGH' }];
 let tkts = [
-  { id: 1, n: 'Customer #101', d: 'Front-Line', o: 'Alex', st: 'In Progress', unr: 0, time: '21:08', lbls: ['VIP', 'Callback'], m: [{ t: 'ai', x: 'Welcome! How can I help you today?', ts: '21:07' }, { t: 'in', x: 'Hi, I need quick help setting up my workspace.', ts: '21:08' }] },
-  { id: 2, n: 'Customer #102', d: 'Sales', o: null, st: 'Open', unr: 1, time: '21:04', lbls: ['Lead', 'Quote'], m: [{ t: 'in', x: 'We want to upgrade to 25 seats, do you offer an annual plan?', ts: '21:04' }] },
-  { id: 3, n: 'Customer #103', d: 'Billing & Finance', o: null, st: 'Pending', unr: 1, time: '20:55', lbls: ['Urgent'], m: [{ t: 'in', x: 'Please add our VAT ID to the latest invoice.', ts: '20:55' }] }
+  {
+    id: 1,
+    n: 'Customer #101',
+    d: 'Front-Line',
+    o: 'Alex',
+    st: 'In Progress',
+    unr: 0,
+    time: '21:08',
+    lbls: ['VIP', 'Callback'],
+    m: [
+      { t: 'ai', x: 'Welcome! How can I help you today?', ts: '21:07' },
+      { t: 'in', x: 'Hi, I need quick help setting up my workspace.', ts: '21:08' }
+    ]
+  },
+  {
+    id: 2,
+    n: 'Customer #102',
+    d: 'Sales',
+    o: null,
+    st: 'Open',
+    unr: 1,
+    time: '21:04',
+    lbls: ['Lead', 'Quote'],
+    m: [
+      { t: 'in', x: 'We want to upgrade to 25 seats, do you offer an annual plan?', ts: '21:04' }
+    ]
+  },
+  {
+    id: 3,
+    n: 'Customer #103',
+    d: 'Billing & Finance',
+    o: null,
+    st: 'Pending',
+    unr: 1,
+    time: '20:55',
+    lbls: ['Urgent'],
+    m: [
+      { t: 'in', x: 'Please add our VAT ID to the latest invoice.', ts: '20:55' }
+    ]
+  }
 ];
 
 let callState = { active: false, incoming: null, tid: null, sec: 0, timer: null };
 let fbDraft = [];
 
-const getAgentName = () => dock.getConfig().agentIdentity?.displayName || dock.getConfig().agentIdentity?.name || 'Alex';
+const getAgentName = () =>
+  dock.getConfig().agentIdentity?.displayName ||
+  dock.getConfig().agentIdentity?.name ||
+  'Alex';
+
 const getDepts = () => dock.getConfig().departments || [];
-const getDeptObj = name => getDepts().find(d => d.name === name) || getDepts()[0] || { name, filterLabel: '', acts: [] };
-const cur = () => tkts.find(t => t.id === id) || tkts[0];
+const getDeptObj = name => getDepts().find(d => d.name === name) || getDepts().at(0) || { name, filterLabel: '', acts: [] };
+const cur = () => tkts.find(t => t.id === id) || tkts.at(0);
 const lCol = n => (labels.find(l => l.name === n) || {}).color || '#09090b';
 const sCol = n => (statuses.find(s => s.name === n) || {}).color || '#71717a';
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -110,7 +158,7 @@ function applyCommsStateUI() {
 
 function cycleIdentityMode() {
   const idx = (IDENTITY_MODES.indexOf(identityMode) + 1) % IDENTITY_MODES.length;
-  identityMode = IDENTITY_MODES[idx];
+  identityMode = IDENTITY_MODES.at(idx);
   applyCommsStateUI();
   dock.emit({
     type: 'AGENT_PROFILE_UPDATE',
@@ -127,7 +175,9 @@ function initUI() {
   xList.innerHTML = depts.map(d => `<button class="opt" onclick="xfer('${esc(d.name)}')">→ ${esc(d.name)}</button>`).join('');
   tktStP.innerHTML = statuses.map(s => `<button class="opt" onclick="setStatus('${esc(s.name)}');closePops()"><span class="dot" style="background:${s.color}"></span>${esc(s.name)}</button>`).join('');
   rFormMenu();
-  if (!depts.some(d => d.name === aDept) && depts.length) aDept = depts[0].name;
+  if (!depts.some(d => d.name === aDept) && depts.length) {
+    aDept = depts.at(0).name;
+  }
   applyCommsStateUI();
   rMissed();
   setDept(aDept);
@@ -138,7 +188,8 @@ function closePops() {
 }
 
 function togglePop(p) {
-  const el = document.getElementById(p), open = el.classList.contains('open');
+  const el = document.getElementById(p);
+  const open = el.classList.contains('open');
   closePops();
   if (!open) el.classList.add('open');
 }
@@ -155,7 +206,9 @@ function setPresence(label, color, live) {
     closePops();
     return;
   }
-  isLive = live; stTxt.textContent = label; stDot.style.background = color;
+  isLive = live;
+  stTxt.textContent = label;
+  stDot.style.background = color;
   aiBnr.textContent = live ? 'Live Specialist Active' : `${label} · ${assistantName} 24/7`;
   closePops();
   if (!live) {
@@ -172,18 +225,43 @@ function setPresence(label, color, live) {
 }
 
 function simChat() {
-  const depts = getDepts(), tg = depts[seq % depts.length].name, nid = ++seq, fl = getDeptObj(tg).filterLabel;
+  const depts = getDepts();
+  const tg = depts.at(seq % depts.length).name;
+  const nid = ++seq;
+  const fl = getDeptObj(tg).filterLabel;
   const assistantName = dock.getConfig().assistant?.name || 'Steward Deck';
-  const nt = { id: nid, n: `Customer #${nid}`, d: tg, o: isLive ? null : assistantName, st: statuses[0].name, unr: 1, time: now(), lbls: fl ? [fl] : [], m: [{ t: 'ai', x: 'Welcome! How can I assist you today?', ts: now() }, { t: 'in', x: 'Hi, I have a quick question about my account.', ts: now() }] };
-  if (!isLive) nt.m.push({ t: 'ai', x: `Thank you! I captured your request and routed it to ${tg}.`, ts: now() });
-  tkts.unshift(nt); id = nid; setDept(tg);
+  const nt = {
+    id: nid,
+    n: `Customer #${nid}`,
+    d: tg,
+    o: isLive ? null : assistantName,
+    st: statuses.at(0).name,
+    unr: 1,
+    time: now(),
+    lbls: fl ? [fl] : [],
+    m: [
+      { t: 'ai', x: 'Welcome! How can I assist you today?', ts: now() },
+      { t: 'in', x: 'Hi, I have a quick question about my account.', ts: now() }
+    ]
+  };
+  if (!isLive) {
+    nt.m.push({ t: 'ai', x: `Thank you! I captured your request and routed it to ${tg}.`, ts: now() });
+  }
+  tkts.unshift(nt);
+  id = nid;
+  setDept(tg);
 }
 
 function setDept(d) {
-  aDept = d; dLbl.textContent = d; tab = 'DEPT'; fLbl = '';
+  aDept = d;
+  dLbl.textContent = d;
+  tab = 'DEPT';
+  fLbl = '';
   const fl = getDeptObj(d).filterLabel;
   tabs.innerHTML = `<div class="tab act" onclick="sTab('DEPT',this)">Team</div><div class="tab" onclick="sTab('MINE',this)">Mine</div>${fl ? `<div class="tab" onclick="sTab('SPECIAL',this)">${esc(fl)}</div>` : ''}<div class="tab" onclick="sTab('ALL',this)">All</div>`;
-  rLblFilter(); rList(); rChat();
+  rLblFilter();
+  rList();
+  rChat();
 }
 
 function sTab(t, el) {
@@ -194,7 +272,8 @@ function sTab(t, el) {
 }
 
 function rLblFilter() {
-  lFilter.innerHTML = `<span class="lchip ${!fLbl ? 'act' : ''}" onclick="fLbl='';rLblFilter();rList()">All</span>` + labels.map(l => `<span class="lchip ${fLbl === l.name ? 'act' : ''}" onclick="fLbl=fLbl==='${esc(l.name)}'?'':'${esc(l.name)}';rLblFilter();rList()"><span class="dot" style="background:${l.color}"></span>${esc(l.name)}</span>`).join('');
+  lFilter.innerHTML = `<span class="lchip ${!fLbl ? 'act' : ''}" onclick="fLbl='';rLblFilter();rList()">All</span>` +
+    labels.map(l => `<span class="lchip ${fLbl === l.name ? 'act' : ''}" onclick="fLbl=fLbl==='${esc(l.name)}'?'':'${esc(l.name)}';rLblFilter();rList()"><span class="dot" style="background:${l.color}"></span>${esc(l.name)}</span>`).join('');
 }
 
 function previewText(t) {
@@ -207,7 +286,9 @@ function previewText(t) {
 }
 
 function rList() {
-  const q = qIn.value.toLowerCase().trim(), fl = getDeptObj(aDept).filterLabel, me = getAgentName();
+  const q = qIn.value.toLowerCase().trim();
+  const fl = getDeptObj(aDept).filterLabel;
+  const me = getAgentName();
   list.innerHTML = tkts.filter(t =>
     (tab !== 'DEPT' || t.d === aDept) &&
     (tab !== 'MINE' || t.o === me) &&
