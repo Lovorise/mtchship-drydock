@@ -15,21 +15,19 @@
   font-family: var(--host-font, "Inter", system-ui, -apple-system, sans-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: var(--host-bg, #09090b);
-    --p: var(--host-panel, #111114);
-    --s: var(--host-surface, #18181c);
-    --h: var(--host-hover, #27272a);
-    --b: var(--host-border, #27272a);
-    --t: var(--host-text, #fafafa);
-    --m: var(--host-muted, #8e8e98);
-    --a: var(--host-accent, #ffffff);
-    --af: var(--host-accent-fg, #09090b);
-    --ok: #22c55e;
-    --w: #f59e0b;
-    --e: #ef4444;
-  }
+:root[data-theme="dark"] {
+  --bg: var(--host-bg, #09090b);
+  --p: var(--host-panel, #111114);
+  --s: var(--host-surface, #18181c);
+  --h: var(--host-hover, #27272a);
+  --b: var(--host-border, #27272a);
+  --t: var(--host-text, #fafafa);
+  --m: var(--host-muted, #8e8e98);
+  --a: var(--host-accent, #ffffff);
+  --af: var(--host-accent-fg, #09090b);
+  --ok: #22c55e;
+  --w: #f59e0b;
+  --e: #ef4444;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
