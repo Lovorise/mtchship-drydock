@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org",
   "$id": "https://mtchship.com",
   "title": "MTCHSHIP Compass UI Comms Wire Contract",
+  "description": "Copyright (c) 2026 Lovorise Ltd. Licensed under the Apache License, Version 2.0.",
   "type": "object",
   "required": ["type", "ticketId", "timestamp"],
   "properties": {
@@ -12,25 +13,49 @@
         "MESSAGE_IN",
         "FORM_RENDER",
         "FORM_SUBMIT",
+        "HOST_AUTH_CHALLENGE",
+        "HOST_AUTH_RESULT",
+        "UI_SPOTLIGHT_INTENT",
+        "UI_SPOTLIGHT",
+        "WORKER_DELEGATE",
+        "WORKER_DRAFT_READY",
+        "TICKET_SUMMARY_READY",
         "CALL_INTENT",
         "CALL_STATE",
         "CALLBACK_INITIATE",
         "AGENT_PRESENCE",
-        "AGENT_PROFILE_UPDATE"
+        "AGENT_PROFILE_UPDATE",
+        "TRANSFER_INTENT",
+        "TRANSFER_COMPLETED",
+        "TICKET_STATE",
+        "AGENT_ASSIGNED",
+        "COPILOT_SUGGESTION",
+        "ERROR"
       ]
     },
     "ticketId": { "type": "string" },
-    "timestamp": { "type": "integer" },
+    "timestamp": { "type": "integer", "minimum": 0 },
     "sender": {
       "type": "object",
+      "required": ["role", "displayName", "avatarMode"],
       "properties": {
-        "role": { "type": "string", "enum": ["CUSTOMER", "CHAT_ASSISTANT", "HUMAN_AGENT"] },
+        "role": {
+          "type": "string",
+          "enum": ["CUSTOMER", "CHAT_ASSISTANT", "HUMAN_AGENT", "AI_WORKER"]
+        },
         "displayName": { "type": "string" },
-        "avatarMode": { "type": "string", "enum": ["AGENT_PHOTO", "COMPANY_LOGO"] },
+        "avatarMode": {
+          "type": "string",
+          "enum": ["AGENT_PHOTO", "NAME_INITIALS", "COMPANY_LOGO"]
+        },
         "avatarUrl": { "type": ["string", "null"] }
       },
-      "required": ["role", "displayName", "avatarMode"]
+      "additionalProperties": false
     },
-    "payload": { "type": "object" }
-  }
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
 }
