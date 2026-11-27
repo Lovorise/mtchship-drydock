@@ -1,35 +1,29 @@
 # MTCHSHIP Compass UI: `comms` Module
 
-Open-source, industry-agnostic customer communication UI components, embeddable agent workspace, and deterministic docking interface (`CommsDock`) for **MTCHSHIP Compass UI** (`compass-ui/comms`).
+Open-source, industry-agnostic customer communication UI components, embeddable specialist workspace, and deterministic docking interface (`CommsDock`) for **MTCHSHIP Compass UI** (`compass-ui/comms`).
 
-The `comms` module creates a unified, white-label conversational and transactional layer across **Web** (Vanilla JS / TypeScript), **Android** (Kotlin / Jetpack Compose), and **iOS** (Swift / SwiftUI). Built from the ground up with **zero third-party dependencies** and **zero data persistence (`0 bytes`)**, it replaces fragmented legacy ticket desks with a single stateless stream combining natural messaging, **Host-Authenticated Live Forms (`FORM_RENDER`)**, **In-App UI Spotlights (`UI_SPOTLIGHT`)**, phone-number-free **In-App Voice Calls**, **Zero-Drop Warm Transfers**, and **24/7 Steward Deck AI**.
+The `comms` module provides a unified, white-label conversational and transactional layer across **Web** (Vanilla JS / TypeScript), **Android** (Kotlin / Jetpack Compose), and **iOS** (Swift / SwiftUI). Built with **zero third-party dependencies** and **zero data persistence (`0 bytes`)**, it combines natural messaging, **Host-Authenticated Live Forms (`FORM_RENDER`)**, **In-App UI Spotlights (`UI_SPOTLIGHT`)**, number-free **In-App Voice Calls**, **Zero-Drop Warm Transfers**, and **24/7 Steward Deck** coverage in a single stateless stream.
 
-All core runtime capabilities (**Live Chat**, **In-App Voice Calls**, **On-Demand Live Forms**, **Zero-Drop Warm Transfers**, **UI Spotlights**, and **24/7 Steward Deck AI**) run on standard edge compute planes and unlock automatically starting with **MTCHSHIP Edge Pro** (`Pro`, `Business`, `Enterprise`) via your **DNS-Only CNAME** host — or run 100% air-gapped on `127.0.0.1` via **MTCHSHIP Drydock** (`127.0.0.1:9090` / `127.0.0.1:8443`).
-
----
+All core runtime capabilities (**Live Chat**, **In-App Voice Calls**, **On-Demand Live Forms**, **Zero-Drop Warm Transfers**, **UI Spotlights**, and **24/7 Steward Deck**) run on standard edge compute planes and unlock automatically starting with **MTCHSHIP Edge Pro** (`Pro`, `Business`, `Enterprise`) via your **DNS-Only CNAME** host, or run 100% air-gapped on `127.0.0.1` via **MTCHSHIP Drydock** (`127.0.0.1:9090` / `127.0.0.1:8443`).
 
 ## Why Compass UI `comms`?
 
 | Capability | Legacy Support Suites | MTCHSHIP Compass UI `comms` |
 | :--- | :--- | :--- |
-| **Deployment & Activation** | Manual API keys & third-party SDK bloat | **Zero-Config `DNS-Only CNAME`** + air-gapped `127.0.0.1` Drydock |
-| **Data Custody** | Vendor-locked cloud databases | **Zero Persistence (`0 bytes`)** — 100% BYOS via `CommsDock` |
-| **Workflows & Forms** | External links & rigid bot trees | **On-Demand `FORM_RENDER`** with optional **Host Biometric / Passkey Sign-Off** |
+| **Deployment & Activation** | Manual API keys and third-party SDKs | **Zero-Config `DNS-Only CNAME`** + air-gapped `127.0.0.1` Drydock |
+| **Data Custody** | Vendor-locked cloud databases | **Zero Persistence (`0 bytes`)** (100% BYOS via `CommsDock`) |
+| **Workflows & Forms** | External links and rigid bot trees | **On-Demand `FORM_RENDER`** with optional **Host Biometric / Passkey Sign-Off** |
 | **Visual Guidance** | Heavy video screen-sharing | **Zero-Bandwidth `UI_SPOTLIGHT`** directly on host-app elements |
-| **Voice Support** | Phone numbers & PSTN carrier bridges | **Number-Free Encrypted In-App Voice Calls** with chat minimization |
-| **Escalations** | Ticket closed or context lost | **Zero-Drop Warm Transfer** with private **Whisper Notes** & AI wrap-up |
-| **Identity & Branding** | Hardcoded widget settings & one bot avatar | **Host-Managed Adaptive Identity** (`COMPANY_LOGO` for AI, `AGENT_PHOTO` or `NAME_INITIALS` / digits for humans) |
-
----
+| **Voice Support** | Phone numbers and PSTN carrier bridges | **Number-Free Encrypted In-App Voice Calls** with chat minimization |
+| **Escalations** | Ticket closed or context lost | **Zero-Drop Warm Transfer** with private **Whisper Notes** and wrap-up payload |
+| **Identity & Branding** | Hardcoded widget settings and single bot avatar | **Host-Managed Adaptive Identity** (`COMPANY_LOGO` for AI, `AGENT_PHOTO` or `NAME_INITIALS` / digits for humans) |
 
 ## Overview
 
-* **Pure White-Label & Zero Widget Clutter:** Designed in MTCHSHIP's high-contrast monochrome palette (`#09090b` / `#ffffff`), inheriting host light/dark themes and tokens automatically. There are no redundant settings panels inside the widget — workspace administrators manage branding, departments, and specialist identities directly inside their own host app or admin panel.
+* **Pure White-Label & Zero Widget Clutter:** Designed in MTCHSHIP's monochrome palette (`#09090b` / `#ffffff`), inheriting host light/dark themes and tokens automatically. There are no redundant settings panels inside the widget; workspace administrators manage branding, departments, and specialist identities directly inside their own host app or admin panel.
 * **Automatic Edge Pro API Activation via CNAME:** `comms-dock.js` resolves the active tenant and subscription tier directly from the `DNS-Only CNAME` hostname (or local `127.0.0.1` Drydock control plane). Starting at **MTCHSHIP Edge Pro** (`pro`, `business`, `enterprise`), the entire built-in Comms API and real-time SSE wire stream activate automatically.
 * **Steward Deck 24/7 + Human Specialists:** **Steward Deck** represents your brand (`COMPANY_LOGO`) 24/7, answering questions and rendering interactive forms (`FORM_RENDER`) only when needed. When a human specialist joins, the host panel controls whether they appear via **Name**, **Digits** (e.g. `#04`), **Initials**, **Uploaded Photo (`AGENT_PHOTO`)**, or **Brand Mask (`COMPANY_LOGO`)**.
 * **Zero-Drop Warm Transfers & Private Whisper Notes:** Specialists can route active sessions across departments without closing the thread or forcing the customer to repeat context, accompanied by private **Whisper Notes** and structured `TICKET_SUMMARY_READY` payloads for your BYOS CRM.
-
----
 
 ## Module & Cross-Platform Layout
 
@@ -50,8 +44,6 @@ compass-ui/comms/
 Native mobile packages share the exact same wire schema:
 * `compass-android/`: Kotlin sealed-interface wire contracts (`CommsContract.kt`) and Jetpack Compose UI modules.
 * `compass-ios/`: Swift `Codable` wire contracts (`CommsContract.swift`) and SwiftUI views.
-
----
 
 ## Quick Configuration (`CommsDock`)
 
@@ -91,15 +83,11 @@ iframe.contentWindow.postMessage({
 }, '*');
 ```
 
----
-
 ## Local Testing with MTCHSHIP Drydock (`127.0.0.1`)
 
 When served on `127.0.0.1` or `localhost`, `comms-dock.js` automatically connects to your local air-gapped **Drydock** runtime:
 * **Control & Tier Matrix (`http://127.0.0.1:9090`):** Reads active simulation tier (`pro`, `business`, `enterprise`).
 * **Data Plane & SSE Stream (`http://127.0.0.1:8443`):** Dispatches wire frames (`POST /wire`) and subscribes to live events (`GET /live/stream`) with zero persistent disk writes (`persistent_disk_bytes: 0`).
-
----
 
 ## System Boundary & Invariants
 
