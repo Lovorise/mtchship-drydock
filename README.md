@@ -72,10 +72,10 @@ curl -N http://127.0.0.1:8443
 
 ## 4. Compass SDK & Compass UI
 
-**Compass** provides bidirectional streaming clients (**gRPC**, **gRPC-Web**, **WebSocket**, **SSE**) and framework-agnostic headless UI primitives across **TypeScript** (Web), **Swift** (iOS), and **Kotlin** (Android) for the built-in API suite, **Compliance UI** (`sdk/compass-ui/compliance`), and your own **BYOS / BYOD** backend, databases, object storage, and external data providers.
+**Compass** provides bidirectional streaming clients (**gRPC**, **gRPC-Web**, **WebSocket**, **SSE**) and framework-agnostic headless UI primitives across **TypeScript** (Web), **Swift** (iOS), and **Kotlin** (Android) for the built-in API suite and your own **BYOS / BYOD** backend, databases, object storage, and external data providers.
 
 * **Zero Data Lock-In:** MTCHSHIP does not supply proprietary content or data feeds. **Compass UI** inherits host application styles and runs free against your origin servers or local `127.0.0.1` Drydock.
-* **Modular Architecture:** Individual **Compass UI** primitives and API modules are documented per package inside `sdk/` and `docs/`.
+* **Modular Architecture:** Individual **Compass UI** primitives and module definitions (`comms`, `data-intelligence`) are located inside `compass-ui/` and documented in `docs/`.
 
 ```ts
 import { CompassClient } from '@mtchship/compass';
@@ -88,7 +88,7 @@ const compass = new CompassClient({
 const stream = compass.subscribe('/live/stream');
 ```
 
-See `sdk/compass`, `sdk/compass-ui`, `sdk/compass-ui/compliance`, `sdk/compass-ios`, and `sdk/compass-android` for package documentation.
+See `compass-ui/` (`compass-ui/modules.json`, `compass-ui/comms`, `compass-ui/data-intelligence`) for UI module definitions.
 
 ## 5. Production Deployment (`MTCHSHIP Edge`)
 
@@ -103,15 +103,23 @@ See **[docs/PLATFORM.md](./docs/PLATFORM.md)** for full plan details, capacities
 ## 6. Repository Structure
 
 ```text
+├── .github/                          # GitHub workflows & templates
 ├── .well-known/security.txt          # RFC 9116 security contact
+├── addons/                           # Data Plane Engine extensions & add-ons
 ├── cmd/drydock/                      # Drydock CLI entrypoint
+├── compass-ui/
+│   ├── comms/                        # Headless communication UI primitives
+│   ├── data-intelligence/            # Headless BI & analytics UI primitives
+│   └── modules.json                  # Compass UI module manifest
 ├── compliance/
 │   ├── compliance_sse.go             # Ed25519 Wipe Receipts SSE & public key endpoints
 │   └── audit.go                      # Volatile in-RAM OCSF/OTLP zero-payload audit ring buffer
 ├── docs/                             # Platform Plans (PLATFORM.md), Whitepaper, Onboarding & Order Form
 ├── internal/                         # Config, API gate, TCO Matrix & Promote API
-├── sdk/                              # compass (TypeScript), compass-ui (incl. compliance), compass-ios, compass-android
 ├── scripts/smoke_test.sh             # Air-gapped end-to-end verification script
+├── AUP.md                            # Acceptable Use Policy
+├── CHANGELOG.md                      # Release history
+├── CONTRIBUTING.md                   # Contribution guidelines
 └── drydock.example.yaml              # Sample local configuration
 ```
 
