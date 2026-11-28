@@ -1,0 +1,82 @@
+{
+  "$schema": "https://mtchship.com",
+  "title": "MTCHSHIP Visual Clerk ZK-Attest & VRAM Wipe Receipt",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "timestamp_utc",
+    "module",
+    "execution_plane",
+    "egress_plane",
+    "hub_id",
+    "stored_media_bytes",
+    "vram_zeroed_bytes",
+    "zk_attest",
+    "public_key_hex",
+    "ed25519_signature"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^vc_[a-f0-9]{8,}$"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "kyc",
+        "optics-ocr",
+        "vision-inspect",
+        "safety-shield",
+        "redact-guard",
+        "live-copilot",
+        "media-studio"
+      ]
+    },
+    "execution_plane": {
+      "type": "string",
+      "enum": ["mtchship-edge", "gpu-forge-harbor"]
+    },
+    "egress_plane": {
+      "type": "string",
+      "const": "harbor-traffic"
+    },
+    "sealed_harbor_used": {
+      "type": "boolean"
+    },
+    "flow_protection": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["surge-valve", "quantum-fuse"]
+      }
+    },
+    "hub_id": {
+      "type": "string"
+    },
+    "stored_media_bytes": {
+      "type": "integer",
+      "const": 0
+    },
+    "vram_zeroed_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "zk_attest": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "public_key_hex": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "ed25519_signature": {
+      "type": "string",
+      "pattern": "^ed25519:[a-f0-9]{128}$"
+    }
+  }
+}
